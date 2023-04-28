@@ -5,6 +5,7 @@ project(TRTInferSample LANGUAGES CXX CUDA)
 add_definitions(-std=c++17)
 
 find_package(CUDA REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
 add_compile_options(-std=c++17)
@@ -30,6 +31,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Ofast -Wfatal-errors -
 
 find_package(OpenCV)
 include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${EIGEN3_INCLUDE_DIRS})
 
 cuda_add_executable(TRTInferSample ${PROJECT_SOURCE_DIR}/main.cpp
                               ${PROJECT_SOURCE_DIR}/../TRTInfer/src/Inference.cpp
@@ -39,6 +41,7 @@ target_link_libraries(TRTInferSample ${OpenCV_LIBS})
 target_link_libraries(TRTInferSample nvinfer)
 target_link_libraries(TRTInferSample cudart)
 target_link_libraries(TRTInferSample nvonnxparser)
+target_link_libraries(TRTInferSample ${Eigen3_LIBRARIES})
 
 
 add_definitions(-O3 -pthread)

@@ -2,7 +2,7 @@
 
 int main()
 {
-    TRTInfer myInfer(0);
+    TRTInferV1::TRTInfer myInfer(0);
     myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/build/TRTInferSample", 1, 416, 416);
     std::shared_ptr<std::vector<cv::Mat>> frames;
     frames->emplace_back(cv::imread("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/include/main.h"));
