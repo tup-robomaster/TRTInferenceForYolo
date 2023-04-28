@@ -33,4 +33,4 @@
 
 .vscode
 sample/build
-engines/model_trt.engine
+sample/engines

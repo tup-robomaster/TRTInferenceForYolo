@@ -100,6 +100,20 @@ namespace TRTInferV1
         }
     }
 
+    float calcTriangleArea(cv::Point2f pts[3])
+    {
+        auto a = sqrt(pow((pts[0] - pts[1]).x, 2) + pow((pts[0] - pts[1]).y, 2));
+        auto b = sqrt(pow((pts[1] - pts[2]).x, 2) + pow((pts[1] - pts[2]).y, 2));
+        auto c = sqrt(pow((pts[2] - pts[0]).x, 2) + pow((pts[2] - pts[0]).y, 2));
+        auto p = (a + b + c) / 2.f;
+        return sqrt(p * (p - a) * (p - b) * (p - c));
+    }
+
+    float calcTetragonArea(cv::Point2f pts[4])
+    {
+        return calcTriangleArea(&pts[0]) + calcTriangleArea(&pts[1]);
+    }
+
     void TRTInfer::generate_grids_and_stride(const int target_w, const int target_h, std::vector<int> &strides, std::vector<GridAndStride> &grid_strides)
     {
         for (auto stride : strides)
@@ -125,12 +139,12 @@ namespace TRTInferV1
 
         const int num_anchors = grid_strides.size();
         // Travel all the anchors
-        for (int anchor_idx = 0; anchor_idx < num_anchors; anchor_idx++)
+        for (int anchor_idx = 0; anchor_idx < num_anchors; ++anchor_idx)
         {
             const int grid0 = grid_strides[anchor_idx].grid0;
             const int grid1 = grid_strides[anchor_idx].grid1;
             const int stride = grid_strides[anchor_idx].stride;
-            const int basic_pos = anchor_idx * (9 + (NUM_COLORS) + NUM_CLASSES);
+            const int basic_pos = anchor_idx * (9 + NUM_COLORS + NUM_CLASSES);
 
             float x_1 = (feat_ptr[basic_pos + 0] + grid0) * stride;
             float y_1 = (feat_ptr[basic_pos + 1] + grid1) * stride;
@@ -141,11 +155,18 @@ namespace TRTInferV1
             float x_4 = (feat_ptr[basic_pos + 6] + grid0) * stride;
             float y_4 = (feat_ptr[basic_pos + 7] + grid1) * stride;
 
-            float box_objectness = (feat_ptr[basic_pos + 8]);
             int box_color = argmax(feat_ptr + basic_pos + 9, NUM_COLORS);
             int box_class = argmax(feat_ptr + basic_pos + 9 + NUM_COLORS, NUM_CLASSES);
-
+            float box_objectness = (feat_ptr[basic_pos + 8]);
             float box_prob = box_objectness;
+
+            // std::cout << "output:" << std::endl;
+            // for (int ii = 0; ii < 25; ii++)
+            // {
+            //     std::cout << feat_ptr[basic_pos + ii] << " ";
+            // }
+            // std::cout << std::endl;
+
             if (box_prob >= prob_threshold)
             {
                 ArmorObject obj;
@@ -176,19 +197,19 @@ namespace TRTInferV1
         } // point anchor loop
     }
 
-    void TRTInfer::decodeOutputs(const float *prob, std::vector<ArmorObject> &objects, Eigen::Matrix<float, 3, 3> &transform_matrix)
+    void TRTInfer::decodeOutputs(const float *prob, std::vector<ArmorObject> &objects, Eigen::Matrix<float, 3, 3> &transform_matrix, float confidence_threshold, float nms_threshold)
     {
         std::vector<ArmorObject> proposals;
         std::vector<int> strides = {8, 16, 32};
         std::vector<GridAndStride> grid_strides;
 
         generate_grids_and_stride(this->input_dims.d[3], this->input_dims.d[2], strides, grid_strides);
-        generateYoloxProposals(grid_strides, prob, transform_matrix, BBOX_CONF_THRESH, proposals);
+        generateYoloxProposals(grid_strides, prob, transform_matrix, confidence_threshold, proposals);
         qsort_descent_inplace(proposals);
         if (proposals.size() >= TOPK)
             proposals.resize(TOPK);
         std::vector<int> picked;
-        nms_sorted_bboxes(proposals, picked, NMS_THRESH);
+        nms_sorted_bboxes(proposals, picked, nms_threshold);
         int count = picked.size();
         objects.resize(count);
         for (int i = 0; i < count; i++)
@@ -228,41 +249,36 @@ namespace TRTInferV1
         }
         this->runtime = createInferRuntime(this->gLogger);
         assert(runtime != nullptr);
-        ICudaEngine *engine;
-        engine = this->runtime->deserializeCudaEngine(trtModelStream, size);
-        assert(engine != nullptr);
-        this->context = engine->createExecutionContext();
+        this->engine = this->runtime->deserializeCudaEngine(trtModelStream, size);
+        assert(this->engine != nullptr);
+        this->context = this->engine->createExecutionContext();
         assert(context != nullptr);
         delete trtModelStream;
-        this->input_dims = engine->getTensorShape(INPUT_BLOB_NAME);
-        this->out_dims = engine->getTensorShape(OUTPUT_BLOB_NAME);
+        this->input_dims = this->engine->getTensorShape(INPUT_BLOB_NAME);
+        this->out_dims = this->engine->getTensorShape(OUTPUT_BLOB_NAME);
         for (int i = 0; i < this->out_dims.nbDims; ++i)
         {
             this->output_size *= this->out_dims.d[i];
         }
         int IOtensorsNum = engine->getNbIOTensors();
         assert(IOtensorsNum == 2);
-        bool IOtensorsNameCheck = true;
         for (int i = 0; i < IOtensorsNum; ++i)
         {
-            if (engine->getIOTensorName(i) == INPUT_BLOB_NAME)
+            if (strcmp(this->engine->getIOTensorName(i), INPUT_BLOB_NAME))
             {
-                inputIndex = i;
-                assert(engine->getTensorDataType(INPUT_BLOB_NAME) == nvinfer1::DataType::kFLOAT);
+                this->inputIndex = i;
+                assert(this->engine->getTensorDataType(INPUT_BLOB_NAME) == nvinfer1::DataType::kFLOAT);
             }
-            else if (engine->getIOTensorName(i) == OUTPUT_BLOB_NAME)
+            else if (strcmp(this->engine->getIOTensorName(i), OUTPUT_BLOB_NAME))
             {
-                outputIndex = i;
-                assert(engine->getTensorDataType(OUTPUT_BLOB_NAME) == nvinfer1::DataType::kFLOAT);
-            }
-            else
-            {
-                IOtensorsNameCheck = false;
+                this->outputIndex = i;
+                assert(this->engine->getTensorDataType(OUTPUT_BLOB_NAME) == nvinfer1::DataType::kFLOAT);
             }
         }
-        if (!IOtensorsNameCheck)
+        if (this->inputIndex == -1 || this->outputIndex == -1)
         {
             this->gLogger.log(ILogger::Severity::kERROR, "Uncorrect Input/Output tensor name");
+            delete context;
             delete engine;
             return false;
         }
@@ -271,7 +287,6 @@ namespace TRTInferV1
         CHECK(cudaMallocHost((void **)&this->img_host, MAX_IMAGE_INPUT_SIZE_THRESH * 3));
         CHECK(cudaMalloc((void **)&this->img_device, MAX_IMAGE_INPUT_SIZE_THRESH * 3));
         this->output = (float *)malloc(max_batch * this->output_size * sizeof(float));
-        delete engine;
         return true;
     }
 
@@ -285,20 +300,30 @@ namespace TRTInferV1
         CHECK(cudaFree(this->buffers[this->outputIndex]));
     }
 
-    bool TRTInfer::saveEngineFile(nvinfer1::IHostMemory *data, const std::string engine_file_path)
+    void TRTInfer::saveEngineFile(IHostMemory *data, const std::string engine_file_path)
     {
-
+        std::string serialize_str;
+        std::ofstream serialize_output_stream;
+        serialize_str.resize(data->size());
+        memcpy((void *)serialize_str.data(), data->data(), data->size());
+        serialize_output_stream.open(engine_file_path);
+        serialize_output_stream << serialize_str;
+        serialize_output_stream.close();
     }
 
-    std::vector<std::vector<ArmorObject>> TRTInfer::doInference(std::shared_ptr<std::vector<cv::Mat>> frames, int batchSize, float confidence_threshold, float nms_threshold)
+    std::vector<std::vector<ArmorObject>> TRTInfer::doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold)
     {
-        std::vector<std::vector<ArmorObject>> batch_res(batchSize);
+        if (frames.size() == 0)
+        {
+            return {};
+        }
+        std::vector<std::vector<ArmorObject>> batch_res(frames.size());
         cudaStream_t stream = nullptr;
         CHECK(cudaStreamCreate(&stream));
         float *buffer_idx = (float *)buffers[this->inputIndex];
-        for (size_t b = 0; b < frames->size(); ++b)
+        for (size_t b = 0; b < frames.size(); ++b)
         {
-            cv::Mat img = frames->at(b);
+            cv::Mat img = frames[b];
             if (img.empty())
                 continue;
             size_t size_image = img.cols * img.rows * 3;
@@ -308,6 +333,8 @@ namespace TRTInferV1
             preprocess_kernel_img(img_device, img.cols, img.rows, buffer_idx, this->input_dims.d[3], this->input_dims.d[2], stream);
             buffer_idx += size_image_dst;
         }
+        this->context->setTensorAddress(INPUT_BLOB_NAME, this->buffers[this->inputIndex]);
+        this->context->setTensorAddress(OUTPUT_BLOB_NAME, this->buffers[this->outputIndex]);
         bool success = this->context->enqueueV3(stream);
         if (!success)
         {
@@ -315,15 +342,15 @@ namespace TRTInferV1
             CHECK(cudaStreamDestroy(stream));
             return {};
         }
-        CHECK(cudaMemcpyAsync(this->output, buffers[1], batchSize * this->output_size * sizeof(float), cudaMemcpyDeviceToHost, stream));
+        CHECK(cudaMemcpyAsync(this->output, buffers[this->outputIndex], frames.size() * this->output_size * sizeof(float), cudaMemcpyDeviceToHost, stream));
         CHECK(cudaStreamSynchronize(stream));
         CHECK(cudaStreamDestroy(stream));
-        for (int b = 0; b < int(frames->size()); ++b)
+        for (int b = 0; b < int(frames.size()); ++b)
         {
             auto &res = batch_res[b];
-            float r = std::min(this->input_dims.d[3] / (frames->at(b).cols * 1.0), this->input_dims.d[2] / (frames->at(b).rows * 1.0));
-            int unpad_w = r * frames->at(b).cols;
-            int unpad_h = r * frames->at(b).rows;
+            float r = std::min(this->input_dims.d[3] / (frames[b].cols * 1.0), this->input_dims.d[2] / (frames[b].rows * 1.0));
+            int unpad_w = r * frames[b].cols;
+            int unpad_h = r * frames[b].rows;
 
             int dw = this->input_dims.d[3] - unpad_w;
             int dh = this->input_dims.d[2] - unpad_h;
@@ -335,7 +362,33 @@ namespace TRTInferV1
             transform_matrix << 1.0 / r, 0, -dw / r,
                 0, 1.0 / r, -dh / r,
                 0, 0, 1;
-            this->decodeOutputs(&this->output[b * this->output_size], res, transform_matrix);
+            this->decodeOutputs(&this->output[b * this->output_size], res, transform_matrix, confidence_threshold, nms_threshold);
+            for (auto object = res.begin(); object != res.end(); ++object)
+            {
+                // 对候选框预测角点进行平均,降低误差
+                if ((*object).pts.size() >= 8)
+                {
+                    auto N = (*object).pts.size();
+                    cv::Point2f pts_final[4];
+                    for (int i = 0; i < (int)N; i++)
+                    {
+                        pts_final[i % 4] += (*object).pts[i];
+                    }
+
+                    for (int i = 0; i < 4; i++)
+                    {
+                        pts_final[i].x = pts_final[i].x / (N / 4);
+                        pts_final[i].y = pts_final[i].y / (N / 4);
+                    }
+
+                    (*object).apex[0] = pts_final[0];
+                    (*object).apex[1] = pts_final[1];
+                    (*object).apex[2] = pts_final[2];
+                    (*object).apex[3] = pts_final[3];
+                }
+
+                (*object).area = (int)(calcTetragonArea((*object).apex));
+            }
         }
         return batch_res;
     }
@@ -347,7 +400,10 @@ namespace TRTInferV1
         INetworkDefinition *network = builder->createNetworkV2(flag);
 
         IParser *parser = createParser(*network, gLogger);
-        parser->parseFromFile(onnx_path.c_str(), static_cast<int32_t>(ILogger::Severity::kWARNING));
+        if (!parser->parseFromFile(onnx_path.c_str(), static_cast<int32_t>(ILogger::Severity::kWARNING)))
+        {
+            this->gLogger.log(ILogger::Severity::kINTERNAL_ERROR, "failed parse the onnx mode");
+        }
         // 解析有错误将返回
         for (int32_t i = 0; i < parser->getNbErrors(); ++i)
         {
@@ -356,7 +412,7 @@ namespace TRTInferV1
         this->gLogger.log(ILogger::Severity::kINFO, "successfully parse the onnx mode");
         IBuilderConfig *config = builder->createBuilderConfig();
         // Build engine
-        config->setMemoryPoolLimit(MemoryPoolType::kWORKSPACE, 1 << 20);
+        config->setMemoryPoolLimit(MemoryPoolType::kWORKSPACE, 10 << 20);
         config->setFlag(nvinfer1::BuilderFlag::kFP16); // 设置精度计算
         // config->setFlag(nvinfer1::BuilderFlag::kINT8);
         IHostMemory *serializedModel = builder->buildSerializedNetwork(*network, *config);

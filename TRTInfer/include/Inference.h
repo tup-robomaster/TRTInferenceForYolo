@@ -28,17 +28,18 @@ namespace TRTInferV1
     class TRTInfer
     {
     private:
-        const char *INPUT_BLOB_NAME = "input_0";
-        const char *OUTPUT_BLOB_NAME = "output_0";
+        const char *INPUT_BLOB_NAME = "images";
+        const char *OUTPUT_BLOB_NAME = "output";
 
     private:
         Logger gLogger;
         IRuntime *runtime;
+        ICudaEngine *engine;
         IExecutionContext *context;
         void *buffers[2];
         int output_size = 1;
-        int inputIndex;
-        int outputIndex;
+        int inputIndex = -1;
+        int outputIndex = -1;
         Dims input_dims;
         Dims out_dims;
         uint8_t *img_host = nullptr;
@@ -47,7 +48,7 @@ namespace TRTInferV1
 
     private:
         void generate_grids_and_stride(const int target_w, const int target_h, std::vector<int> &strides, std::vector<GridAndStride> &grid_strides);
-        void decodeOutputs(const float *prob, std::vector<ArmorObject> &objects, Eigen::Matrix<float, 3, 3> &transform_matrix);
+        void decodeOutputs(const float *prob, std::vector<ArmorObject> &objects, Eigen::Matrix<float, 3, 3> &transform_matrix, float confidence_threshold, float nms_threshold);
 
     public:
         TRTInfer(const int device);
@@ -56,9 +57,9 @@ namespace TRTInferV1
         bool initMoudle(const std::string engine_file_path, const int max_batch, const int img_h, const int img_w);
         void unInitMoudle();
 
-        bool saveEngineFile(nvinfer1::IHostMemory *data, const std::string engine_file_path);
+        void saveEngineFile(IHostMemory *data, const std::string engine_file_path);
 
-        std::vector<std::vector<ArmorObject>> doInference(std::shared_ptr<std::vector<cv::Mat>> frames, int batchSize, float confidence_threshold, float nms_threshold);
+        std::vector<std::vector<ArmorObject>> doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold);
         IHostMemory *createEngine(const std::string onnx_path, unsigned int maxBatchSize);
     };
 }
