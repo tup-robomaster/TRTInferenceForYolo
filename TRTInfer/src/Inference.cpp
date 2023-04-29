@@ -160,13 +160,6 @@ namespace TRTInferV1
             float box_objectness = (feat_ptr[basic_pos + 8]);
             float box_prob = box_objectness;
 
-            // std::cout << "output:" << std::endl;
-            // for (int ii = 0; ii < 25; ii++)
-            // {
-            //     std::cout << feat_ptr[basic_pos + ii] << " ";
-            // }
-            // std::cout << std::endl;
-
             if (box_prob >= prob_threshold)
             {
                 ArmorObject obj;
@@ -416,7 +409,7 @@ namespace TRTInferV1
         config->setFlag(nvinfer1::BuilderFlag::kFP16); // 设置精度计算
         // config->setFlag(nvinfer1::BuilderFlag::kINT8);
         IHostMemory *serializedModel = builder->buildSerializedNetwork(*network, *config);
-        this->gLogger.log(ILogger::Severity::kINFO, "successfully  convert onnx to  engine");
+        this->gLogger.log(ILogger::Severity::kINFO, "successfully convert onnx to engine");
 
         // 销毁
         delete network;
