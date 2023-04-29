@@ -41,7 +41,7 @@ namespace TRTInferV1
         int inputIndex = -1;
         int outputIndex = -1;
         Dims input_dims;
-        Dims out_dims;
+        Dims output_dims;
         uint8_t *img_host = nullptr;
         uint8_t *img_device = nullptr;
         float *output;
@@ -54,12 +54,12 @@ namespace TRTInferV1
         TRTInfer(const int device);
         ~TRTInfer();
 
-        bool initMoudle(const std::string engine_file_path, const int max_batch, const int img_h, const int img_w);
+        bool initMoudle(const std::string engine_file_path, const int batch_size, const int img_h, const int img_w);
         void unInitMoudle();
 
         void saveEngineFile(IHostMemory *data, const std::string engine_file_path);
 
         std::vector<std::vector<ArmorObject>> doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold);
-        IHostMemory *createEngine(const std::string onnx_path, unsigned int maxBatchSize);
+        IHostMemory *createEngine(const std::string onnx_path, unsigned int maxBatchSize, int input_h, int input_w);
     };
 }

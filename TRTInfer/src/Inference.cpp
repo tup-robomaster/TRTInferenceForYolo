@@ -90,13 +90,13 @@ namespace TRTInferV1
                     {
                         for (int i = 0; i < 4; i++)
                         {
-                            b.pts.push_back(a.apex[i]);
+                            b.pts.emplace_back(a.apex[i]);
                         }
                     }
                 }
             }
             if (keep)
-                picked.push_back(i);
+                picked.emplace_back(i);
         }
     }
 
@@ -176,7 +176,7 @@ namespace TRTInferV1
                 for (int i = 0; i < 4; i++)
                 {
                     obj.apex[i] = cv::Point2f(apex_dst(0, i), apex_dst(1, i));
-                    obj.pts.push_back(obj.apex[i]);
+                    obj.pts.emplace_back(obj.apex[i]);
                 }
 
                 std::vector<cv::Point2f> tmp(obj.apex, obj.apex + 4);
@@ -185,7 +185,7 @@ namespace TRTInferV1
                 obj.color = box_color;
                 obj.prob = box_prob;
 
-                objects.push_back(obj);
+                objects.emplace_back(obj);
             }
         } // point anchor loop
     }
@@ -220,7 +220,7 @@ namespace TRTInferV1
     {
     }
 
-    bool TRTInfer::initMoudle(const std::string engine_file_path, const int max_batch, const int img_h, const int img_w)
+    bool TRTInfer::initMoudle(const std::string engine_file_path, const int batch_size, const int img_h, const int img_w)
     {
         char *trtModelStream{nullptr};
         size_t size{0};
@@ -248,11 +248,10 @@ namespace TRTInferV1
         assert(context != nullptr);
         delete trtModelStream;
         this->input_dims = this->engine->getTensorShape(INPUT_BLOB_NAME);
-        this->out_dims = this->engine->getTensorShape(OUTPUT_BLOB_NAME);
-        for (int i = 0; i < this->out_dims.nbDims; ++i)
-        {
-            this->output_size *= this->out_dims.d[i];
-        }
+        this->input_dims.d[0] = batch_size;
+        this->output_dims = this->engine->getTensorShape(OUTPUT_BLOB_NAME);
+        this->context->setInputShape(INPUT_BLOB_NAME, input_dims);
+        this->output_size = output_dims.d[1] * output_dims.d[2];
         int IOtensorsNum = engine->getNbIOTensors();
         assert(IOtensorsNum == 2);
         for (int i = 0; i < IOtensorsNum; ++i)
@@ -275,11 +274,11 @@ namespace TRTInferV1
             delete engine;
             return false;
         }
-        CHECK(cudaMalloc(&buffers[inputIndex], max_batch * 3 * img_h * img_w * sizeof(float)));
-        CHECK(cudaMalloc(&buffers[outputIndex], max_batch * this->output_size * sizeof(float)));
-        CHECK(cudaMallocHost((void **)&this->img_host, MAX_IMAGE_INPUT_SIZE_THRESH * 3));
-        CHECK(cudaMalloc((void **)&this->img_device, MAX_IMAGE_INPUT_SIZE_THRESH * 3));
-        this->output = (float *)malloc(max_batch * this->output_size * sizeof(float));
+        CHECK(cudaMalloc(&buffers[inputIndex], batch_size * 3 * img_h * img_w * sizeof(float)));
+        CHECK(cudaMalloc(&buffers[outputIndex], batch_size * this->output_size * sizeof(float)));
+        CHECK(cudaMallocHost((void **)&this->img_host, MAX_IMAGE_INPUT_SIZE_THRESH * 3 * sizeof(float)));
+        CHECK(cudaMalloc((void **)&this->img_device, MAX_IMAGE_INPUT_SIZE_THRESH * 3 * sizeof(float)));
+        this->output = (float *)malloc(batch_size * this->output_size * sizeof(float));
         return true;
     }
 
@@ -316,7 +315,7 @@ namespace TRTInferV1
         float *buffer_idx = (float *)buffers[this->inputIndex];
         for (size_t b = 0; b < frames.size(); ++b)
         {
-            cv::Mat img = frames[b];
+            cv::Mat &img = frames[b];
             if (img.empty())
                 continue;
             size_t size_image = img.cols * img.rows * 3;
@@ -326,6 +325,7 @@ namespace TRTInferV1
             preprocess_kernel_img(img_device, img.cols, img.rows, buffer_idx, this->input_dims.d[3], this->input_dims.d[2], stream);
             buffer_idx += size_image_dst;
         }
+        this->context->setOptimizationProfileAsync(0, stream);
         this->context->setTensorAddress(INPUT_BLOB_NAME, this->buffers[this->inputIndex]);
         this->context->setTensorAddress(OUTPUT_BLOB_NAME, this->buffers[this->outputIndex]);
         bool success = this->context->enqueueV3(stream);
@@ -386,7 +386,7 @@ namespace TRTInferV1
         return batch_res;
     }
 
-    IHostMemory *TRTInfer::createEngine(const std::string onnx_path, unsigned int maxBatchSize)
+    IHostMemory *TRTInfer::createEngine(const std::string onnx_path, unsigned int maxBatchSize, int input_h, int input_w)
     {
         IBuilder *builder = createInferBuilder(this->gLogger);
         uint32_t flag = 1U << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
@@ -404,7 +404,15 @@ namespace TRTInferV1
         }
         this->gLogger.log(ILogger::Severity::kINFO, "successfully parse the onnx mode");
         IBuilderConfig *config = builder->createBuilderConfig();
+        IOptimizationProfile *profile = builder->createOptimizationProfile();
+        // 这里有个OptProfileSelector，这个用来设置优化的参数,比如（Tensor的形状或者动态尺寸），
+
+        profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kMIN, Dims4(1, 3, input_h, input_w));
+        profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kOPT, Dims4(int(maxBatchSize / 2), 3, input_h, input_w));
+        profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kMAX, Dims4(maxBatchSize, 3, input_h, input_w));
+
         // Build engine
+        config->addOptimizationProfile(profile);
         config->setMemoryPoolLimit(MemoryPoolType::kWORKSPACE, 10 << 20);
         config->setFlag(nvinfer1::BuilderFlag::kFP16); // 设置精度计算
         // config->setFlag(nvinfer1::BuilderFlag::kINT8);

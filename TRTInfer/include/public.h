@@ -32,7 +32,7 @@ using namespace nvonnxparser;
         }                                                      \
     } while (0)
 
-#define MAX_IMAGE_INPUT_SIZE_THRESH 3000 * 3000
+#define MAX_IMAGE_INPUT_SIZE_THRESH 10000 * 10000
 #define MAX_OUTPUT_BBOX_COUNT 1000
 
 using namespace nvinfer1;
