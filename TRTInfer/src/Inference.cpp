@@ -220,7 +220,7 @@ namespace TRTInferV1
     {
     }
 
-    bool TRTInfer::initMoudle(const std::string engine_file_path, const int batch_size, const int img_h, const int img_w)
+    bool TRTInfer::initMoudle(const std::string engine_file_path, const int batch_size)
     {
         char *trtModelStream{nullptr};
         size_t size{0};
@@ -274,7 +274,7 @@ namespace TRTInferV1
             delete engine;
             return false;
         }
-        CHECK(cudaMalloc(&buffers[inputIndex], batch_size * 3 * img_h * img_w * sizeof(float)));
+        CHECK(cudaMalloc(&buffers[inputIndex], batch_size * this->input_dims.d[1] * this->input_dims.d[2] * this->input_dims.d[3] * sizeof(float)));
         CHECK(cudaMalloc(&buffers[outputIndex], batch_size * this->output_size * sizeof(float)));
         CHECK(cudaMallocHost((void **)&this->img_host, MAX_IMAGE_INPUT_SIZE_THRESH * 3 * sizeof(float)));
         CHECK(cudaMalloc((void **)&this->img_device, MAX_IMAGE_INPUT_SIZE_THRESH * 3 * sizeof(float)));
@@ -305,8 +305,9 @@ namespace TRTInferV1
 
     std::vector<std::vector<ArmorObject>> TRTInfer::doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold)
     {
-        if (frames.size() == 0)
+        if (frames.size() == 0 || int(frames.size()) > this->input_dims.d[0])
         {
+            this->gLogger.log(ILogger::Severity::kWARNING, "Invalid frames size");
             return {};
         }
         std::vector<std::vector<ArmorObject>> batch_res(frames.size());

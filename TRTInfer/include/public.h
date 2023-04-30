@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __PUBLIC_H
+#define __PUBLIC_H
 
 #include <opencv2/opencv.hpp>
 
@@ -17,7 +18,7 @@
 #include "logging.h"
 #include "preprocess.h"
 #include "./macros.h"
-
+#include "cuda_runtime.h"
 #include "NvOnnxParser.h"
 using namespace nvonnxparser;
 
@@ -36,3 +37,5 @@ using namespace nvonnxparser;
 #define MAX_OUTPUT_BBOX_COUNT 1000
 
 using namespace nvinfer1;
+
+#endif  // __PUBLIC_H
