@@ -15,7 +15,7 @@ namespace TRTInferV1
         return max_arg;
     }
 
-    void TRTInfer::qsort_descent_inplace(std::vector<ArmorObject> &objects, int left, int right)
+    void TRTInfer::qsort_descent_inplace(std::vector<DetectObject> &objects, int left, int right)
     {
         int i = left;
         int j = right;
@@ -43,21 +43,19 @@ namespace TRTInferV1
             qsort_descent_inplace(objects, i, right);
     }
 
-    void TRTInfer::qsort_descent_inplace(std::vector<ArmorObject> &objects)
+    void TRTInfer::qsort_descent_inplace(std::vector<DetectObject> &objects)
     {
         if (objects.empty())
             return;
-
         qsort_descent_inplace(objects, 0, objects.size() - 1);
     }
 
-    inline float TRTInfer::intersection_area(const ArmorObject &a, const ArmorObject &b)
+    inline float TRTInfer::intersection_area(const DetectObject &a, const DetectObject &b)
     {
-        cv::Rect_<float> inter = a.rect & b.rect;
-        return inter.area();
+        return (a.rect & b.rect).area();
     }
 
-    void TRTInfer::nms_sorted_bboxes(std::vector<ArmorObject> &objects, std::vector<int> &picked, float nms_threshold)
+    void TRTInfer::nms_sorted_bboxes(std::vector<DetectObject> &objects, std::vector<int> &picked, float nms_threshold)
     {
         picked.clear();
         const int n = objects.size();
@@ -70,11 +68,11 @@ namespace TRTInferV1
 
         for (int i = 0; i < n; i++)
         {
-            ArmorObject &a = objects[i];
+            DetectObject &a = objects[i];
             int keep = 1;
             for (int j = 0; j < (int)picked.size(); j++)
             {
-                ArmorObject &b = objects[picked[j]];
+                DetectObject &b = objects[picked[j]];
                 // intersection over union
                 float inter_area = intersection_area(a, b);
                 float union_area = areas[i] + areas[picked[j]] - inter_area;
@@ -130,8 +128,8 @@ namespace TRTInferV1
     }
 
     void TRTInfer::generateYoloxProposals(std::vector<GridAndStride> grid_strides, const float *feat_ptr,
-                                Eigen::Matrix<float, 3, 3> &transform_matrix, float prob_threshold,
-                                std::vector<ArmorObject> &objects)
+                                          Eigen::Matrix<float, 3, 3> &transform_matrix, float prob_threshold,
+                                          std::vector<DetectObject> &objects)
     {
 
         const int num_anchors = grid_strides.size();
@@ -141,32 +139,36 @@ namespace TRTInferV1
             const int grid0 = grid_strides[anchor_idx].grid0;
             const int grid1 = grid_strides[anchor_idx].grid1;
             const int stride = grid_strides[anchor_idx].stride;
-            const int basic_pos = anchor_idx * (9 + this->num_colors + this->num_classes);
+            const int num_apex_expend = 2 * this->num_apex;
+            const int basic_pos = anchor_idx * (num_apex_expend + 1 + this->num_colors + this->num_classes);
 
-            float x_1 = (feat_ptr[basic_pos + 0] + grid0) * stride;
-            float y_1 = (feat_ptr[basic_pos + 1] + grid1) * stride;
-            float x_2 = (feat_ptr[basic_pos + 2] + grid0) * stride;
-            float y_2 = (feat_ptr[basic_pos + 3] + grid1) * stride;
-            float x_3 = (feat_ptr[basic_pos + 4] + grid0) * stride;
-            float y_3 = (feat_ptr[basic_pos + 5] + grid1) * stride;
-            float x_4 = (feat_ptr[basic_pos + 6] + grid0) * stride;
-            float y_4 = (feat_ptr[basic_pos + 7] + grid1) * stride;
+            std::vector<float> x_box;
+            std::vector<float> y_box;
 
-            int box_color = argmax(feat_ptr + basic_pos + 9, this->num_colors);
-            int box_class = argmax(feat_ptr + basic_pos + 9 + this->num_colors, this->num_classes);
-            float box_objectness = (feat_ptr[basic_pos + 8]);
+            for (int apex_id = 0; apex_id < num_apex_expend; apex_id = apex_id + 2)
+            {
+                x_box.emplace_back((feat_ptr[basic_pos + apex_id] + grid0) * stride);
+                y_box.emplace_back((feat_ptr[basic_pos + apex_id + 1] + grid1) * stride);
+            }
+
+            int box_color = argmax(feat_ptr + basic_pos + (num_apex_expend + 1), this->num_colors);
+            int box_class = argmax(feat_ptr + basic_pos + (num_apex_expend + 1) + this->num_colors, this->num_classes);
+            float box_objectness = (feat_ptr[basic_pos + num_apex_expend]);
             float box_prob = box_objectness;
 
             if (box_prob >= prob_threshold)
             {
-                ArmorObject obj;
+                DetectObject obj;
 
-                Eigen::Matrix<float, 3, 4> apex_norm;
-                Eigen::Matrix<float, 3, 4> apex_dst;
+                Eigen::MatrixXf apex_norm(3, this->num_apex);
+                Eigen::MatrixXf apex_dst(3, this->num_apex);
 
-                apex_norm << x_1, x_2, x_3, x_4,
-                    y_1, y_2, y_3, y_4,
-                    1, 1, 1, 1;
+                for (int apex_id = 0; apex_id < this->num_apex; ++apex_id)
+                {
+                    apex_norm(0, apex_id) = x_box[apex_id];
+                    apex_norm(1, apex_id) = y_box[apex_id];
+                    apex_norm(2, apex_id) = 1;
+                }
 
                 apex_dst = transform_matrix * apex_norm;
 
@@ -187,9 +189,9 @@ namespace TRTInferV1
         } // point anchor loop
     }
 
-    void TRTInfer::decodeOutputs(const float *prob, std::vector<ArmorObject> &objects, Eigen::Matrix<float, 3, 3> &transform_matrix, float confidence_threshold, float nms_threshold)
+    void TRTInfer::decodeOutputs(const float *prob, std::vector<DetectObject> &objects, Eigen::Matrix<float, 3, 3> &transform_matrix, float confidence_threshold, float nms_threshold)
     {
-        std::vector<ArmorObject> proposals;
+        std::vector<DetectObject> proposals;
         std::vector<int> strides = {8, 16, 32};
         std::vector<GridAndStride> grid_strides;
 
@@ -217,8 +219,9 @@ namespace TRTInferV1
     {
     }
 
-    bool TRTInfer::initMoudle(const std::string engine_file_path, const int batch_size, const int num_classes, const int num_colors, const int topK)
+    bool TRTInfer::initMoudle(const std::string engine_file_path, const int batch_size, const int num_apex, const int num_classes, const int num_colors, const int topK)
     {
+        this->num_apex = num_apex;
         this->num_classes = num_classes;
         this->num_colors = num_colors;
         this->topK = topK;
@@ -303,14 +306,14 @@ namespace TRTInferV1
         serialize_output_stream.close();
     }
 
-    std::vector<std::vector<ArmorObject>> TRTInfer::doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold)
+    std::vector<std::vector<DetectObject>> TRTInfer::doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold)
     {
         if (frames.size() == 0 || int(frames.size()) > this->input_dims.d[0])
         {
             this->gLogger.log(ILogger::Severity::kWARNING, "Invalid frames size");
             return {};
         }
-        std::vector<std::vector<ArmorObject>> batch_res(frames.size());
+        std::vector<std::vector<DetectObject>> batch_res(frames.size());
         cudaStream_t stream = nullptr;
         CHECK(cudaStreamCreate(&stream));
         float *buffer_idx = (float *)buffers[this->inputIndex];

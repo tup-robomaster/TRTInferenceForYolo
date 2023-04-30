@@ -9,7 +9,7 @@ int main()
     TRTInferV1::TRTInfer myInfer(0);
     // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/build/yolox.onnx", 8, 416, 416);
     // myInfer.saveEngineFile(data, "/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine");
-    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine", 4, 8, 8, 128);
+    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine", 4, 4, 8, 8, 128);
 
     cv::VideoCapture cap(0);
     std::vector<cv::Mat> frames;
@@ -41,7 +41,7 @@ int main()
         // frames.emplace_back(img3);
         // frames.emplace_back(img4);
         auto start_t = std::chrono::system_clock::now().time_since_epoch();
-        std::vector<std::vector<TRTInferV1::ArmorObject>> result = myInfer.doInference(frames, 0.9, 0.5);
+        std::vector<std::vector<TRTInferV1::DetectObject>> result = myInfer.doInference(frames, 0.9, 0.5);
         auto end_t = std::chrono::system_clock::now().time_since_epoch();
         char ch[255];
         for (int i(0); i < int(frames.size()); ++i)
