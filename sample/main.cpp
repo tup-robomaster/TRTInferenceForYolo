@@ -3,9 +3,9 @@
 int main()
 {
     cv::namedWindow("Test", cv::WINDOW_NORMAL);
-    cv::namedWindow("Test2", cv::WINDOW_NORMAL);
-    cv::namedWindow("Test3", cv::WINDOW_NORMAL);
-    cv::namedWindow("Test4", cv::WINDOW_NORMAL);
+    // cv::namedWindow("Test2", cv::WINDOW_NORMAL);
+    // cv::namedWindow("Test3", cv::WINDOW_NORMAL);
+    // cv::namedWindow("Test4", cv::WINDOW_NORMAL);
     TRTInferV1::TRTInfer myInfer(0);
     // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/build/yolox.onnx", 8, 416, 416);
     // myInfer.saveEngineFile(data, "/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine");
@@ -32,14 +32,14 @@ int main()
         }
         cv::Mat img, img2, img3, img4;
         cap.read(img);
-        img2 = img.clone();
-        img3 = img.clone();
-        img4 = img.clone();
+        // img2 = img.clone();
+        // img3 = img.clone();
+        // img4 = img.clone();
         assert(!img.empty());
         frames.emplace_back(img);
-        frames.emplace_back(img2);
-        frames.emplace_back(img3);
-        frames.emplace_back(img4);
+        // frames.emplace_back(img2);
+        // frames.emplace_back(img3);
+        // frames.emplace_back(img4);
         auto start_t = std::chrono::system_clock::now().time_since_epoch();
         std::vector<std::vector<TRTInferV1::ArmorObject>> result = myInfer.doInference(frames, 0.9, 0.5);
         auto end_t = std::chrono::system_clock::now().time_since_epoch();
@@ -60,9 +60,9 @@ int main()
         }
         std::cout << ch << std::endl;
         cv::imshow("Test", frames[0]);
-        cv::imshow("Test2", frames[1]);
-        cv::imshow("Test3", frames[2]);
-        cv::imshow("Test4", frames[3]);
+        // cv::imshow("Test2", frames[1]);
+        // cv::imshow("Test3", frames[2]);
+        // cv::imshow("Test4", frames[3]);
         cv::waitKey(1);
     }
 

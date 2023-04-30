@@ -10,7 +10,7 @@ namespace TRTInferV1
     static inline int argmax(const float *ptr, int len)
     {
         int max_arg = 0;
-        for (int i = 1; i < len; i++)
+        for (int i = 1; i < len; ++i)
         {
             if (ptr[i] > ptr[max_arg])
                 max_arg = i;
@@ -18,32 +18,32 @@ namespace TRTInferV1
         return max_arg;
     }
 
-    static void qsort_descent_inplace(std::vector<ArmorObject> &faceobjects, int left, int right)
+    static void qsort_descent_inplace(std::vector<ArmorObject> &objects, int left, int right)
     {
         int i = left;
         int j = right;
-        float p = faceobjects[(left + right) / 2].prob;
+        float p = objects[(left + right) / 2].prob;
 
         while (i <= j)
         {
-            while (faceobjects[i].prob > p)
+            while (objects[i].prob > p)
                 i++;
 
-            while (faceobjects[j].prob < p)
+            while (objects[j].prob < p)
                 j--;
 
             if (i <= j)
             {
                 // swap
-                std::swap(faceobjects[i], faceobjects[j]);
+                std::swap(objects[i], objects[j]);
                 i++;
                 j--;
             }
         }
         if (left < j)
-            qsort_descent_inplace(faceobjects, left, j);
+            qsort_descent_inplace(objects, left, j);
         if (i < right)
-            qsort_descent_inplace(faceobjects, i, right);
+            qsort_descent_inplace(objects, i, right);
     }
 
     static void qsort_descent_inplace(std::vector<ArmorObject> &objects)
@@ -60,24 +60,24 @@ namespace TRTInferV1
         return inter.area();
     }
 
-    static void nms_sorted_bboxes(std::vector<ArmorObject> &faceobjects, std::vector<int> &picked, float nms_threshold)
+    static void nms_sorted_bboxes(std::vector<ArmorObject> &objects, std::vector<int> &picked, float nms_threshold)
     {
         picked.clear();
-        const int n = faceobjects.size();
+        const int n = objects.size();
 
         std::vector<float> areas(n);
         for (int i = 0; i < n; i++)
         {
-            areas[i] = faceobjects[i].rect.area();
+            areas[i] = objects[i].rect.area();
         }
 
         for (int i = 0; i < n; i++)
         {
-            ArmorObject &a = faceobjects[i];
+            ArmorObject &a = objects[i];
             int keep = 1;
             for (int j = 0; j < (int)picked.size(); j++)
             {
-                ArmorObject &b = faceobjects[picked[j]];
+                ArmorObject &b = objects[picked[j]];
                 // intersection over union
                 float inter_area = intersection_area(a, b);
                 float union_area = areas[i] + areas[picked[j]] - inter_area;
