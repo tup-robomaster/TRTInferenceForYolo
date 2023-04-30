@@ -9,7 +9,7 @@ int main()
     TRTInferV1::TRTInfer myInfer(0);
     // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/build/yolox.onnx", 8, 416, 416);
     // myInfer.saveEngineFile(data, "/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine");
-    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine", 4);
+    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine", 4, 8, 8, 128);
 
     cv::VideoCapture cap(0);
     std::vector<cv::Mat> frames;
@@ -53,7 +53,7 @@ int main()
                 cv::line(frames[i], result[i][j].apex[2], result[i][j].apex[3], cv::Scalar(255, 255, 255), 1);
                 cv::line(frames[i], result[i][j].apex[3], result[i][j].apex[0], cv::Scalar(255, 255, 255), 1);
             }
-            
+
             sprintf(ch, "FPS %d", int(std::chrono::nanoseconds(1000000000).count() / (end_t - start_t).count()));
             std::string fps_str = ch;
             cv::putText(frames[i], fps_str, {10, 25}, cv::FONT_HERSHEY_SIMPLEX, 1, {0, 255, 0});

@@ -1,13 +1,10 @@
 #include "../include/Inference.h"
 namespace TRTInferV1
 {
-    static constexpr int NUM_CLASSES = 8; // Number of classes
-    static constexpr int NUM_COLORS = 8;  // Number of color
-    static constexpr int TOPK = 128;      // TopK
     static constexpr float MERGE_CONF_ERROR = 0.15;
     static constexpr float MERGE_MIN_IOU = 0.9;
 
-    static inline int argmax(const float *ptr, int len)
+    inline int TRTInfer::argmax(const float *ptr, int len)
     {
         int max_arg = 0;
         for (int i = 1; i < len; ++i)
@@ -18,7 +15,7 @@ namespace TRTInferV1
         return max_arg;
     }
 
-    static void qsort_descent_inplace(std::vector<ArmorObject> &objects, int left, int right)
+    void TRTInfer::qsort_descent_inplace(std::vector<ArmorObject> &objects, int left, int right)
     {
         int i = left;
         int j = right;
@@ -46,7 +43,7 @@ namespace TRTInferV1
             qsort_descent_inplace(objects, i, right);
     }
 
-    static void qsort_descent_inplace(std::vector<ArmorObject> &objects)
+    void TRTInfer::qsort_descent_inplace(std::vector<ArmorObject> &objects)
     {
         if (objects.empty())
             return;
@@ -54,13 +51,13 @@ namespace TRTInferV1
         qsort_descent_inplace(objects, 0, objects.size() - 1);
     }
 
-    static inline float intersection_area(const ArmorObject &a, const ArmorObject &b)
+    inline float TRTInfer::intersection_area(const ArmorObject &a, const ArmorObject &b)
     {
         cv::Rect_<float> inter = a.rect & b.rect;
         return inter.area();
     }
 
-    static void nms_sorted_bboxes(std::vector<ArmorObject> &objects, std::vector<int> &picked, float nms_threshold)
+    void TRTInfer::nms_sorted_bboxes(std::vector<ArmorObject> &objects, std::vector<int> &picked, float nms_threshold)
     {
         picked.clear();
         const int n = objects.size();
@@ -100,7 +97,7 @@ namespace TRTInferV1
         }
     }
 
-    float calcTriangleArea(cv::Point2f pts[3])
+    float TRTInfer::calcTriangleArea(cv::Point2f pts[3])
     {
         auto a = sqrt(pow((pts[0] - pts[1]).x, 2) + pow((pts[0] - pts[1]).y, 2));
         auto b = sqrt(pow((pts[1] - pts[2]).x, 2) + pow((pts[1] - pts[2]).y, 2));
@@ -109,7 +106,7 @@ namespace TRTInferV1
         return sqrt(p * (p - a) * (p - b) * (p - c));
     }
 
-    float calcTetragonArea(cv::Point2f pts[4])
+    float TRTInfer::calcTetragonArea(cv::Point2f pts[4])
     {
         return calcTriangleArea(&pts[0]) + calcTriangleArea(&pts[1]);
     }
@@ -132,7 +129,7 @@ namespace TRTInferV1
         }
     }
 
-    void generateYoloxProposals(std::vector<GridAndStride> grid_strides, const float *feat_ptr,
+    void TRTInfer::generateYoloxProposals(std::vector<GridAndStride> grid_strides, const float *feat_ptr,
                                 Eigen::Matrix<float, 3, 3> &transform_matrix, float prob_threshold,
                                 std::vector<ArmorObject> &objects)
     {
@@ -144,7 +141,7 @@ namespace TRTInferV1
             const int grid0 = grid_strides[anchor_idx].grid0;
             const int grid1 = grid_strides[anchor_idx].grid1;
             const int stride = grid_strides[anchor_idx].stride;
-            const int basic_pos = anchor_idx * (9 + NUM_COLORS + NUM_CLASSES);
+            const int basic_pos = anchor_idx * (9 + this->num_colors + this->num_classes);
 
             float x_1 = (feat_ptr[basic_pos + 0] + grid0) * stride;
             float y_1 = (feat_ptr[basic_pos + 1] + grid1) * stride;
@@ -155,8 +152,8 @@ namespace TRTInferV1
             float x_4 = (feat_ptr[basic_pos + 6] + grid0) * stride;
             float y_4 = (feat_ptr[basic_pos + 7] + grid1) * stride;
 
-            int box_color = argmax(feat_ptr + basic_pos + 9, NUM_COLORS);
-            int box_class = argmax(feat_ptr + basic_pos + 9 + NUM_COLORS, NUM_CLASSES);
+            int box_color = argmax(feat_ptr + basic_pos + 9, this->num_colors);
+            int box_class = argmax(feat_ptr + basic_pos + 9 + this->num_colors, this->num_classes);
             float box_objectness = (feat_ptr[basic_pos + 8]);
             float box_prob = box_objectness;
 
@@ -199,8 +196,8 @@ namespace TRTInferV1
         generate_grids_and_stride(this->input_dims.d[3], this->input_dims.d[2], strides, grid_strides);
         generateYoloxProposals(grid_strides, prob, transform_matrix, confidence_threshold, proposals);
         qsort_descent_inplace(proposals);
-        if (proposals.size() >= TOPK)
-            proposals.resize(TOPK);
+        if (int(proposals.size()) >= this->topK)
+            proposals.resize(this->topK);
         std::vector<int> picked;
         nms_sorted_bboxes(proposals, picked, nms_threshold);
         int count = picked.size();
@@ -220,8 +217,11 @@ namespace TRTInferV1
     {
     }
 
-    bool TRTInfer::initMoudle(const std::string engine_file_path, const int batch_size)
+    bool TRTInfer::initMoudle(const std::string engine_file_path, const int batch_size, const int num_classes, const int num_colors, const int topK)
     {
+        this->num_classes = num_classes;
+        this->num_colors = num_colors;
+        this->topK = topK;
         char *trtModelStream{nullptr};
         size_t size{0};
         std::ifstream file(engine_file_path, std::ios::binary);

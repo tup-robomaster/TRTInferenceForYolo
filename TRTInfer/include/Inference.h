@@ -36,6 +36,9 @@ namespace TRTInferV1
     private:
         const char *INPUT_BLOB_NAME = "images";
         const char *OUTPUT_BLOB_NAME = "output";
+        int num_classes = -1;
+        int num_colors = -1;
+        int topK = -1;
 
     private:
         Logger gLogger;
@@ -53,7 +56,17 @@ namespace TRTInferV1
         float *output;
 
     private:
+        inline int argmax(const float *ptr, int len);
+        void qsort_descent_inplace(std::vector<ArmorObject> &objects, int left, int right);
+        void qsort_descent_inplace(std::vector<ArmorObject> &objects);
+        inline float intersection_area(const ArmorObject &a, const ArmorObject &b);
+        void nms_sorted_bboxes(std::vector<ArmorObject> &objects, std::vector<int> &picked, float nms_threshold);
+        float calcTriangleArea(cv::Point2f pts[3]);
+        float calcTetragonArea(cv::Point2f pts[4]);
         void generate_grids_and_stride(const int target_w, const int target_h, std::vector<int> &strides, std::vector<GridAndStride> &grid_strides);
+        void generateYoloxProposals(std::vector<GridAndStride> grid_strides, const float *feat_ptr,
+                                    Eigen::Matrix<float, 3, 3> &transform_matrix, float prob_threshold,
+                                    std::vector<ArmorObject> &objects);
         void decodeOutputs(const float *prob, std::vector<ArmorObject> &objects, Eigen::Matrix<float, 3, 3> &transform_matrix, float confidence_threshold, float nms_threshold);
 
     public:
@@ -71,8 +84,14 @@ namespace TRTInferV1
          * engine路径
          * @param batch_size
          * 推理时使用的batch_size,输入图片数量不可大于此设置值，此设定值不可大于构建引擎时应用的maxBatchSize，最佳设定值为maxBatchSize/2
+         * @param num_classes
+         * num_classes设定值
+         * @param num_colors
+         * num_colors设定值
+         * @param topK
+         * topK设定值
          */
-        bool initMoudle(const std::string engine_file_path, const int batch_size);
+        bool initMoudle(const std::string engine_file_path, const int batch_size, const int num_classes, const int num_colors, const int topK);
         /**
          * @brief 反初始化TRT模型，释放显存
          */
