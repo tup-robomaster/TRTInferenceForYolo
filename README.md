@@ -13,3 +13,7 @@ cudnn 8.9.0
 OpenCV 4.6.0
 
 Tensorrt 8.5.3
+
+# 使用
+
+#include "TRTInferenceForYoloX/TRTInfer/include/Inference.h"
