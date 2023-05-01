@@ -83,7 +83,7 @@ namespace TRTInferV1
                     // Stored for Merge
                     if (iou > MERGE_MIN_IOU && abs(a.prob - b.prob) < MERGE_CONF_ERROR && a.cls == b.cls && a.color == b.color)
                     {
-                        for (int i = 0; i < 4; i++)
+                        for (int i = 0; i < this->num_apex; i++)
                         {
                             b.pts.emplace_back(a.apex[i]);
                         }
@@ -104,9 +104,14 @@ namespace TRTInferV1
         return sqrt(p * (p - a) * (p - b) * (p - c));
     }
 
-    float TRTInfer::calcTetragonArea(cv::Point2f pts[4])
+    float TRTInfer::calcPolygonArea(cv::Point2f pts[32])
     {
-        return calcTriangleArea(&pts[0]) + calcTriangleArea(&pts[1]);
+        int area = 0;
+        for (int i = 0;i < this->num_apex - 3;++i)
+        {
+            area += calcTriangleArea(&pts[i]);
+        }
+        return area;
     }
 
     void TRTInfer::generate_grids_and_stride(const int target_w, const int target_h, std::vector<int> &strides, std::vector<GridAndStride> &grid_strides)
@@ -142,13 +147,13 @@ namespace TRTInferV1
             const int num_apex_expend = 2 * this->num_apex;
             const int basic_pos = anchor_idx * (num_apex_expend + 1 + this->num_colors + this->num_classes);
 
-            std::vector<float> x_box;
-            std::vector<float> y_box;
+            float x_box[32];
+            float y_box[32];
 
             for (int apex_id = 0; apex_id < num_apex_expend; apex_id = apex_id + 2)
             {
-                x_box.emplace_back((feat_ptr[basic_pos + apex_id] + grid0) * stride);
-                y_box.emplace_back((feat_ptr[basic_pos + apex_id + 1] + grid1) * stride);
+                x_box[apex_id / 2] = (feat_ptr[basic_pos + apex_id] + grid0) * stride;
+                y_box[apex_id / 2] = (feat_ptr[basic_pos + apex_id + 1] + grid1) * stride;
             }
 
             int box_color = argmax(feat_ptr + basic_pos + (num_apex_expend + 1), this->num_colors);
@@ -366,25 +371,25 @@ namespace TRTInferV1
                 if ((*object).pts.size() >= 8)
                 {
                     auto N = (*object).pts.size();
-                    cv::Point2f pts_final[4];
-                    for (int i = 0; i < (int)N; i++)
+                    cv::Point2f pts_final[this->num_apex];
+                    for (int i = 0; i < (int)N; ++i)
                     {
-                        pts_final[i % 4] += (*object).pts[i];
+                        pts_final[i % this->num_apex] += (*object).pts[i];
                     }
 
-                    for (int i = 0; i < 4; i++)
+                    for (int i = 0; i < this->num_apex; ++i)
                     {
-                        pts_final[i].x = pts_final[i].x / (N / 4);
-                        pts_final[i].y = pts_final[i].y / (N / 4);
+                        pts_final[i].x = pts_final[i].x / (N / this->num_apex);
+                        pts_final[i].y = pts_final[i].y / (N / this->num_apex);
                     }
 
-                    (*object).apex[0] = pts_final[0];
-                    (*object).apex[1] = pts_final[1];
-                    (*object).apex[2] = pts_final[2];
-                    (*object).apex[3] = pts_final[3];
+                    for (int i = 0; i < this->num_apex ; ++i)
+                    {
+                        (*object).apex[i] = pts_final[i];
+                    }
                 }
 
-                (*object).area = (int)(calcTetragonArea((*object).apex));
+                (*object).area = (int)(this->calcPolygonArea((*object).apex));
             }
         }
         return batch_res;

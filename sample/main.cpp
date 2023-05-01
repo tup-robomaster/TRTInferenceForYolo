@@ -2,6 +2,7 @@
 
 int main()
 {
+    int num_apex = 4;
     cv::namedWindow("Test", cv::WINDOW_NORMAL);
     // cv::namedWindow("Test2", cv::WINDOW_NORMAL);
     // cv::namedWindow("Test3", cv::WINDOW_NORMAL);
@@ -9,7 +10,7 @@ int main()
     TRTInferV1::TRTInfer myInfer(0);
     // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/build/yolox.onnx", 8, 416, 416);
     // myInfer.saveEngineFile(data, "/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine");
-    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine", 4, 4, 8, 8, 128);
+    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine", 4, num_apex, 8, 8, 128);
 
     cv::VideoCapture cap(0);
     std::vector<cv::Mat> frames;
@@ -48,10 +49,13 @@ int main()
         {
             for (int j(0); j < int(result[i].size()); ++j)
             {
-                cv::line(frames[i], result[i][j].apex[0], result[i][j].apex[1], cv::Scalar(255, 255, 255), 1);
-                cv::line(frames[i], result[i][j].apex[1], result[i][j].apex[2], cv::Scalar(255, 255, 255), 1);
-                cv::line(frames[i], result[i][j].apex[2], result[i][j].apex[3], cv::Scalar(255, 255, 255), 1);
-                cv::line(frames[i], result[i][j].apex[3], result[i][j].apex[0], cv::Scalar(255, 255, 255), 1);
+                for (int k(0); k < num_apex; ++k)
+                {
+                    if (k < num_apex - 1)
+                        cv::line(frames[i], result[i][j].pts[k], result[i][j].pts[k + 1], cv::Scalar(255, 255, 255), 1);
+                    else
+                        cv::line(frames[i], result[i][j].pts[k], result[i][j].pts[0], cv::Scalar(255, 255, 255), 1);
+                }
             }
 
             sprintf(ch, "FPS %d", int(std::chrono::nanoseconds(1000000000).count() / (end_t - start_t).count()));
