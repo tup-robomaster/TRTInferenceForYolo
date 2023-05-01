@@ -69,6 +69,7 @@ namespace TRTInferV1
                                     Eigen::Matrix<float, 3, 3> &transform_matrix, float prob_threshold,
                                     std::vector<DetectObject> &objects);
         void decodeOutputs(const float *prob, std::vector<DetectObject> &objects, Eigen::Matrix<float, 3, 3> &transform_matrix, float confidence_threshold, float nms_threshold);
+        void postprocess(std::vector<std::vector<DetectObject>> &batch_res, std::vector<cv::Mat> &frames, float &confidence_threshold, float &nms_threshold);
 
     public:
         /**
@@ -117,6 +118,18 @@ namespace TRTInferV1
          * 非极大值抑制阈值
          */
         std::vector<std::vector<DetectObject>> doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold);
+        /**
+         * @brief 执行推理(帧限制)
+         * @param frames
+         * 需要推理的图像序列，图像数量决定推理时batch_size，不可大于初始化模型时指定的batch_size
+         * @param confidence_threshold
+         * 置信度阈值
+         * @param nms_threshold
+         * 非极大值抑制阈值
+         * @param limited_fps
+         * 目标FPS设定值，推理过程的帧数将尝试限定在目标值附近，若运行帧率大于设定值，实际帧数将会接近并稳定下来，指定帧数越高，实际帧数偏差越大，帧数稳定性为±1FPS
+         */
+        std::vector<std::vector<DetectObject>> doInferenceLimitFPS(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold, const int limited_fps);
         /**
          * @brief 构建engine
          * @param onnx_path

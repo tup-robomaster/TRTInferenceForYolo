@@ -38,16 +38,16 @@ namespace TRTInferV1
             }
         }
         if (left < j)
-            qsort_descent_inplace(objects, left, j);
+            this->qsort_descent_inplace(objects, left, j);
         if (i < right)
-            qsort_descent_inplace(objects, i, right);
+            this->qsort_descent_inplace(objects, i, right);
     }
 
     void TRTInfer::qsort_descent_inplace(std::vector<DetectObject> &objects)
     {
         if (objects.empty())
             return;
-        qsort_descent_inplace(objects, 0, objects.size() - 1);
+        this->qsort_descent_inplace(objects, 0, objects.size() - 1);
     }
 
     inline float TRTInfer::intersection_area(const DetectObject &a, const DetectObject &b)
@@ -107,7 +107,7 @@ namespace TRTInferV1
     float TRTInfer::calcPolygonArea(cv::Point2f pts[32])
     {
         int area = 0;
-        for (int i = 0;i < this->num_apex - 3;++i)
+        for (int i = 0; i < this->num_apex - 3; ++i)
         {
             area += calcTriangleArea(&pts[i]);
         }
@@ -200,18 +200,67 @@ namespace TRTInferV1
         std::vector<int> strides = {8, 16, 32};
         std::vector<GridAndStride> grid_strides;
 
-        generate_grids_and_stride(this->input_dims.d[3], this->input_dims.d[2], strides, grid_strides);
-        generateYoloxProposals(grid_strides, prob, transform_matrix, confidence_threshold, proposals);
-        qsort_descent_inplace(proposals);
+        this->generate_grids_and_stride(this->input_dims.d[3], this->input_dims.d[2], strides, grid_strides);
+        this->generateYoloxProposals(grid_strides, prob, transform_matrix, confidence_threshold, proposals);
+        this->qsort_descent_inplace(proposals);
         if (int(proposals.size()) >= this->topK)
             proposals.resize(this->topK);
         std::vector<int> picked;
-        nms_sorted_bboxes(proposals, picked, nms_threshold);
+        this->nms_sorted_bboxes(proposals, picked, nms_threshold);
         int count = picked.size();
         objects.resize(count);
         for (int i = 0; i < count; i++)
         {
             objects[i] = proposals[picked[i]];
+        }
+    }
+
+    void TRTInfer::postprocess(std::vector<std::vector<DetectObject>> &batch_res, std::vector<cv::Mat> &frames, float &confidence_threshold, float &nms_threshold)
+    {
+        for (int b = 0; b < int(frames.size()); ++b)
+        {
+            auto &res = batch_res[b];
+            float r = std::min(this->input_dims.d[3] / (frames[b].cols * 1.0), this->input_dims.d[2] / (frames[b].rows * 1.0));
+            int unpad_w = r * frames[b].cols;
+            int unpad_h = r * frames[b].rows;
+
+            int dw = this->input_dims.d[3] - unpad_w;
+            int dh = this->input_dims.d[2] - unpad_h;
+
+            dw /= 2;
+            dh /= 2;
+
+            Eigen::Matrix3f transform_matrix;
+            transform_matrix << 1.0 / r, 0, -dw / r,
+                0, 1.0 / r, -dh / r,
+                0, 0, 1;
+            this->decodeOutputs(&this->output[b * this->output_size], res, transform_matrix, confidence_threshold, nms_threshold);
+            for (auto object = res.begin(); object != res.end(); ++object)
+            {
+                // 对候选框预测角点进行平均,降低误差
+                if ((*object).pts.size() >= 8)
+                {
+                    auto N = (*object).pts.size();
+                    cv::Point2f pts_final[this->num_apex];
+                    for (int i = 0; i < (int)N; ++i)
+                    {
+                        pts_final[i % this->num_apex] += (*object).pts[i];
+                    }
+
+                    for (int i = 0; i < this->num_apex; ++i)
+                    {
+                        pts_final[i].x = pts_final[i].x / (N / this->num_apex);
+                        pts_final[i].y = pts_final[i].y / (N / this->num_apex);
+                    }
+
+                    for (int i = 0; i < this->num_apex; ++i)
+                    {
+                        (*object).apex[i] = pts_final[i];
+                    }
+                }
+
+                (*object).area = (int)(this->calcPolygonArea((*object).apex));
+            }
         }
     }
 
@@ -347,52 +396,26 @@ namespace TRTInferV1
         CHECK(cudaMemcpyAsync(this->output, buffers[this->outputIndex], frames.size() * this->output_size * sizeof(float), cudaMemcpyDeviceToHost, stream));
         CHECK(cudaStreamSynchronize(stream));
         CHECK(cudaStreamDestroy(stream));
-        for (int b = 0; b < int(frames.size()); ++b)
-        {
-            auto &res = batch_res[b];
-            float r = std::min(this->input_dims.d[3] / (frames[b].cols * 1.0), this->input_dims.d[2] / (frames[b].rows * 1.0));
-            int unpad_w = r * frames[b].cols;
-            int unpad_h = r * frames[b].rows;
 
-            int dw = this->input_dims.d[3] - unpad_w;
-            int dh = this->input_dims.d[2] - unpad_h;
+        this->postprocess(batch_res, frames, confidence_threshold, nms_threshold);
 
-            dw /= 2;
-            dh /= 2;
-
-            Eigen::Matrix3f transform_matrix;
-            transform_matrix << 1.0 / r, 0, -dw / r,
-                0, 1.0 / r, -dh / r,
-                0, 0, 1;
-            this->decodeOutputs(&this->output[b * this->output_size], res, transform_matrix, confidence_threshold, nms_threshold);
-            for (auto object = res.begin(); object != res.end(); ++object)
-            {
-                // 对候选框预测角点进行平均,降低误差
-                if ((*object).pts.size() >= 8)
-                {
-                    auto N = (*object).pts.size();
-                    cv::Point2f pts_final[this->num_apex];
-                    for (int i = 0; i < (int)N; ++i)
-                    {
-                        pts_final[i % this->num_apex] += (*object).pts[i];
-                    }
-
-                    for (int i = 0; i < this->num_apex; ++i)
-                    {
-                        pts_final[i].x = pts_final[i].x / (N / this->num_apex);
-                        pts_final[i].y = pts_final[i].y / (N / this->num_apex);
-                    }
-
-                    for (int i = 0; i < this->num_apex ; ++i)
-                    {
-                        (*object).apex[i] = pts_final[i];
-                    }
-                }
-
-                (*object).area = (int)(this->calcPolygonArea((*object).apex));
-            }
-        }
         return batch_res;
+    }
+
+    std::vector<std::vector<DetectObject>> TRTInfer::doInferenceLimitFPS(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold, const int limited_fps)
+    {
+        double limit_work_time = 1000000000L / limited_fps;
+        std::chrono::system_clock::time_point start_t = std::chrono::system_clock::now();
+        std::vector<std::vector<DetectObject>> result = this->doInference(frames, confidence_threshold, nms_threshold);
+        std::chrono::system_clock::time_point start_e = std::chrono::system_clock::now();
+        std::chrono::duration<double, std::nano> work_time = start_e - start_t;
+        if (work_time.count() < limit_work_time)
+        {
+            std::chrono::duration<double, std::nano> delta_ms(limit_work_time - work_time.count());
+            auto delta_ms_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(delta_ms);
+            std::this_thread::sleep_for(std::chrono::nanoseconds(delta_ms_duration.count()));
+        }
+        return result;
     }
 
     IHostMemory *TRTInfer::createEngine(const std::string onnx_path, unsigned int maxBatchSize, int input_h, int input_w)
