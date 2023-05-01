@@ -20,6 +20,8 @@ int main()
     // cv::Mat src3 = cv::imread("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/1674.jpg");
     // cv::Mat src4 = cv::imread("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/SAU0830.jpg");
 
+    myInfer.calculate_inter_frame_compensation(1000);
+
     while (true)
     {
         frames.clear();

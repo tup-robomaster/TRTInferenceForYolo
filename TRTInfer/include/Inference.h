@@ -55,6 +55,9 @@ namespace TRTInferV1
         uint8_t *img_host = nullptr;
         uint8_t *img_device = nullptr;
         float *output;
+    
+    private:
+        int inter_frame_compensation = 0;
 
     private:
         inline int argmax(const float *ptr, int len);
@@ -119,6 +122,12 @@ namespace TRTInferV1
          */
         std::vector<std::vector<DetectObject>> doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold);
         /**
+         * @brief 计算帧间时间补偿
+         * @param limited_fps
+         * 目标FPS设定值，将根据此设定值计算时间补偿，配合doInferenceLimitFPS使用
+         */
+        void calculate_inter_frame_compensation(const int limited_fps);
+        /**
          * @brief 执行推理(帧限制)
          * @param frames
          * 需要推理的图像序列，图像数量决定推理时batch_size，不可大于初始化模型时指定的batch_size
@@ -127,7 +136,7 @@ namespace TRTInferV1
          * @param nms_threshold
          * 非极大值抑制阈值
          * @param limited_fps
-         * 目标FPS设定值，推理过程的帧数将尝试限定在目标值附近，若运行帧率大于设定值，实际帧数将会接近并稳定下来，指定帧数越高，实际帧数偏差越大，帧数稳定性为±1FPS
+         * 目标FPS设定值，推理过程的帧数将尝试限定在目标值附近，若运行帧率大于设定值，实际帧数将会接近并稳定下来，指定帧数越高，实际帧数偏差越大，帧数稳定性为0~-2FPS
          */
         std::vector<std::vector<DetectObject>> doInferenceLimitFPS(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold, const int limited_fps);
         /**

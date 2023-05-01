@@ -403,18 +403,25 @@ namespace TRTInferV1
         return batch_res;
     }
 
+    void TRTInfer::calculate_inter_frame_compensation(const int limited_fps)
+    {
+        std::chrono::system_clock::time_point start_t = std::chrono::system_clock::now();
+        double limit_work_time = 1000000L / limited_fps;
+        std::this_thread::sleep_for(std::chrono::duration<double, std::micro>(limit_work_time));
+        std::chrono::system_clock::time_point end_t = std::chrono::system_clock::now();
+        this->inter_frame_compensation = std::chrono::duration<double, std::micro>(end_t - start_t).count() - limit_work_time;
+    }
+
     std::vector<std::vector<DetectObject>> TRTInfer::doInferenceLimitFPS(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold, const int limited_fps)
     {
         double limit_work_time = 1000000L / limited_fps;
         std::chrono::system_clock::time_point start_t = std::chrono::system_clock::now();
         std::vector<std::vector<DetectObject>> result = this->doInference(frames, confidence_threshold, nms_threshold);
-        std::chrono::system_clock::time_point start_e = std::chrono::system_clock::now();
-        std::chrono::duration<double, std::micro> work_time = start_e - start_t;
+        std::chrono::system_clock::time_point end_t = std::chrono::system_clock::now();
+        std::chrono::duration<double, std::micro> work_time = end_t - start_t;
         if (work_time.count() < limit_work_time)
         {
-            std::chrono::duration<double, std::micro> delta_ms(limit_work_time - work_time.count());
-            auto delta_ms_duration = std::chrono::duration_cast<std::chrono::microseconds>(delta_ms);
-            std::this_thread::sleep_for(std::chrono::microseconds(delta_ms_duration.count()));
+            std::this_thread::sleep_for(std::chrono::duration<double, std::micro>(limit_work_time - work_time.count() - this->inter_frame_compensation));
         }
         return result;
     }

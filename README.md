@@ -18,8 +18,6 @@ Tensorrt 8.5.3
 
 # 使用
 
-
-
 ```cpp
 #include "TRTInferenceForYoloX/TRTInfer/include/Inference.h"
 ...
@@ -28,6 +26,7 @@ nvinfer1::IHostMemory *data = myInfer.createEngine(const std::string onnx_path, 
 myInfer.saveEngineFile(IHostMemory* data, const std::string engine_file_path); //[Optional]
 myInfer.initMoudle(const std::string engine_file_path, const int batch_size, const int num_apex, const int num_classes, const int num_colors, const int topK);
 std::vector<cv::Mat> frames;
+myInfer.calculate_inter_frame_compensation(const int limited_fps); //[Optional]
 ...
 while(...)
 {
