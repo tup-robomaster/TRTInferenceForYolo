@@ -116,7 +116,7 @@ namespace TRTInferV1
         }
         else
         {
-            area = abs(pts[1].x - pts[0].x) * abs(pts[1].y - pts[0].y)
+            area = abs(pts[1].x - pts[0].x) * abs(pts[1].y - pts[0].y);
         }
         return area;
     }
