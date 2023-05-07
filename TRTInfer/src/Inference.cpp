@@ -107,9 +107,16 @@ namespace TRTInferV1
     float TRTInfer::calcPolygonArea(cv::Point2f pts[32])
     {
         int area = 0;
-        for (int i = 0; i < this->num_apex - 3; ++i)
+        if (this->num_apex > 2)
         {
-            area += calcTriangleArea(&pts[i]);
+            for (int i = 0; i < this->num_apex - 3; ++i)
+            {
+                area += calcTriangleArea(&pts[i]);
+            }
+        }
+        else
+        {
+            area = abs(pts[1].x - pts[0].x) * abs(pts[1].y - pts[0].y)
         }
         return area;
     }
