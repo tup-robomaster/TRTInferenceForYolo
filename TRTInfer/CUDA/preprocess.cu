@@ -72,23 +72,23 @@ __global__ void warpaffine_kernel(
     }
 
     // bgr to rgb
-    float t = c2;
-    c2 = c0;
-    c0 = t;
+    // float t = c2;
+    // c2 = c0;
+    // c0 = t;
 
     // normalization
     //  c0 = c0 / 255.0f;
     //  c1 = c1 / 255.0f;
     //  c2 = c2 / 255.0f;
 
-    // rgbrgbrgb to bbbgggrrr
+    // bgrbgrbgr to bbbgggrrr
     int area = dst_width * dst_height;
     float *pdst_c0 = dst + dy * dst_width + dx;
     float *pdst_c1 = pdst_c0 + area;
     float *pdst_c2 = pdst_c1 + area;
-    *pdst_c0 = c1;
+    *pdst_c0 = c0;
     *pdst_c1 = c1;
-    *pdst_c2 = c0;
+    *pdst_c2 = c2;
 }
 
 void preprocess_kernel_img(
