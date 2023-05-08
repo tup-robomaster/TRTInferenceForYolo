@@ -258,10 +258,6 @@ namespace TRTInferV1
                     {
                         pts_final[i].x = pts_final[i].x / (N / this->num_apex);
                         pts_final[i].y = pts_final[i].y / (N / this->num_apex);
-                    }
-
-                    for (int i = 0; i < this->num_apex; ++i)
-                    {
                         (*object).apex[i] = pts_final[i];
                     }
                 }
@@ -282,6 +278,8 @@ namespace TRTInferV1
 
     bool TRTInfer::initMoudle(const std::string engine_file_path, const int batch_size, const int num_apex, const int num_classes, const int num_colors, const int topK)
     {
+        assert(num_apex <= 32 && num_apex >= 2);
+        assert(batch_size > 0 && num_classes > 0 && num_colors > 0 && topK > 0);
         this->num_apex = num_apex;
         this->num_classes = num_classes;
         this->num_colors = num_colors;
