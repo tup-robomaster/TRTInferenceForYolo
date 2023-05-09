@@ -5,26 +5,25 @@
 
 namespace TRTInferV1
 {
-    struct GridAndStride
+    namespace Yolo
     {
-        int grid0;
-        int grid1;
-        int stride;
-    };
+        static constexpr int CHECK_COUNT = 3;
+        static constexpr float IGNORE_THRESH = 0.1f;
+        struct YoloKernel
+        {
+            int width;
+            int height;
+            float anchors[CHECK_COUNT * 2];
+        };
 
-    struct Object
-    {
-        cv::Rect_<float> rect;
-        int cls;
-        int color;
-        float prob;
-        std::vector<cv::Point2f> pts;
-    };
-
-    struct DetectObject : Object
-    {
-        int area;
-        cv::Point2f apex[32];
+        static constexpr int LOCATIONS = 4;
+        struct alignas(float) Detection
+        {
+            // center_x center_y w h -> xyxy
+            float bbox[LOCATIONS];
+            float conf; // bbox_conf * cls_conf
+            float class_id;
+        };
     };
 
     /**
@@ -36,10 +35,8 @@ namespace TRTInferV1
     private:
         const char *INPUT_BLOB_NAME = "images";
         const char *OUTPUT_BLOB_NAME = "output";
-        int num_apex = -1;
+        int batch_size = 0;
         int num_classes = -1;
-        int num_colors = -1;
-        int topK = -1;
 
     private:
         Logger gLogger;
@@ -55,24 +52,14 @@ namespace TRTInferV1
         uint8_t *img_host = nullptr;
         uint8_t *img_device = nullptr;
         float *output;
-    
+
     private:
         int inter_frame_compensation = 0;
 
     private:
-        inline int argmax(const float *ptr, int len);
-        void qsort_descent_inplace(std::vector<DetectObject> &objects, int left, int right);
-        void qsort_descent_inplace(std::vector<DetectObject> &objects);
-        inline float intersection_area(const DetectObject &a, const DetectObject &b);
-        void nms_sorted_bboxes(std::vector<DetectObject> &objects, std::vector<int> &picked, float nms_threshold);
-        float calcTriangleArea(cv::Point2f pts[3]);
-        float calcPolygonArea(cv::Point2f pts[32]);
-        void generate_grids_and_stride(const int target_w, const int target_h, std::vector<int> &strides, std::vector<GridAndStride> &grid_strides);
-        void generateYoloxProposals(std::vector<GridAndStride> grid_strides, const float *feat_ptr,
-                                    Eigen::Matrix<float, 3, 3> &transform_matrix, float prob_threshold,
-                                    std::vector<DetectObject> &objects);
-        void decodeOutputs(const float *prob, std::vector<DetectObject> &objects, Eigen::Matrix<float, 3, 3> &transform_matrix, float confidence_threshold, float nms_threshold);
-        void postprocess(std::vector<std::vector<DetectObject>> &batch_res, std::vector<cv::Mat> &frames, float &confidence_threshold, float &nms_threshold);
+        float iou(float lbox[4], float rbox[4]);
+        void nms(std::vector<Yolo::Detection> &res, float *output, float conf_thresh, float nms_thresh);
+        void postprocess(std::vector<std::vector<Yolo::Detection>> &batch_res, std::vector<cv::Mat> &frames, float &confidence_threshold, float &nms_threshold);
 
     public:
         /**
@@ -89,16 +76,10 @@ namespace TRTInferV1
          * engine路径
          * @param batch_size
          * 推理时使用的batch_size,输入图片数量不可大于此设置值，此设定值不可大于构建引擎时应用的maxBatchSize，最佳设定值为maxBatchSize/2
-         * @param num_apex
-         * num_apex设定值，角点数量，最大值32
          * @param num_classes
          * num_classes设定值，类别数量
-         * @param num_colors
-         * num_colors设定值，颜色数量
-         * @param topK
-         * topK设定值
          */
-        bool initMoudle(const std::string engine_file_path, const int batch_size, const int num_apex, const int num_classes, const int num_colors, const int topK);
+        bool initMoudle(const std::string engine_file_path, const int batch_size, const int num_classes);
         /**
          * @brief 反初始化TRT模型，释放显存
          */
@@ -120,7 +101,7 @@ namespace TRTInferV1
          * @param nms_threshold
          * 非极大值抑制阈值
          */
-        std::vector<std::vector<DetectObject>> doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold);
+        std::vector<std::vector<Yolo::Detection>> doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold);
         /**
          * @brief 计算帧内时间补偿
          * @param limited_fps
@@ -138,7 +119,7 @@ namespace TRTInferV1
          * @param limited_fps
          * 目标FPS设定值，推理过程的帧数将尝试限定在目标值附近，若运行帧率大于设定值，实际帧数将会接近并稳定下来，指定帧数越高，实际帧数偏差越大，帧数稳定性为+1~-2FPS
          */
-        std::vector<std::vector<DetectObject>> doInferenceLimitFPS(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold, const int limited_fps);
+        std::vector<std::vector<Yolo::Detection>> doInferenceLimitFPS(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold, const int limited_fps);
         /**
          * @brief 构建engine
          * @param onnx_path
