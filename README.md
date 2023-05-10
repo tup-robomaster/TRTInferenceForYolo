@@ -1,6 +1,6 @@
-# TRTInferenceForYoloX
+# TRTInferenceForYolov5
 
-为沈阳航空航天大学TUP机器人实验室设计的Yolox Tensorrt高性能推理加速模块
+为沈阳航空航天大学TUP机器人实验室设计的Yolov5 Tensorrt高性能推理加速模块
 
 # Author: INIF-FISH iratecat1@outlook.com
 
@@ -31,8 +31,8 @@ myInfer.calculate_inter_frame_compensation(const int limited_fps); //[Optional]
 while(...)
 {
     ...
-    std::vector<std::vector<TRTInferV1::DetectObject>> result = myInfer.doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold);
-    std::vector<std::vector<TRTInferV1::DetectObject>> result = myInfer.doInferenceLimitFPS(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold, const int limited_fps); //[Optional]
+    std::vector<std::vector<TRTInferV1::DetectObject>> result = myInfer.doInference(std::vector<cv::Mat> &frames, float obj_threshold,float confidence_threshold, float nms_threshold);
+    std::vector<std::vector<TRTInferV1::DetectObject>> result = myInfer.doInferenceLimitFPS(std::vector<cv::Mat> &frames, float obj_threshold, float confidence_threshold, float nms_threshold, const int limited_fps); //[Optional]
     ...
 }
 ...
