@@ -77,9 +77,9 @@ __global__ void warpaffine_kernel(
     c0 = t;
 
     // normalization
-     c0 = c0 / 255.0f;
-     c1 = c1 / 255.0f;
-     c2 = c2 / 255.0f;
+    c0 = c0 / 255.0f;
+    c1 = c1 / 255.0f;
+    c2 = c2 / 255.0f;
 
     // bgrbgrbgr to bbbgggrrr
     int area = dst_width * dst_height;

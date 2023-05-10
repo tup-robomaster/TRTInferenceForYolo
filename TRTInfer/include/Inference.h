@@ -5,25 +5,14 @@
 
 namespace TRTInferV1
 {
-    namespace Yolo
+    struct DetectionObj
     {
-        static constexpr int CHECK_COUNT = 3;
-        static constexpr float IGNORE_THRESH = 0.1f;
-        struct YoloKernel
-        {
-            int width;
-            int height;
-            float anchors[CHECK_COUNT * 2];
-        };
-
-        static constexpr int LOCATIONS = 4;
-        struct alignas(float) Detection
-        {
-            // center_x center_y w h -> xyxy
-            float bbox[LOCATIONS];
-            float conf; // bbox_conf * cls_conf
-            float class_id;
-        };
+        int classId;
+        float confidence;
+        float x1;
+        float y1;
+        float x2;
+        float y2;
     };
 
     /**
@@ -34,9 +23,10 @@ namespace TRTInferV1
     {
     private:
         const char *INPUT_BLOB_NAME = "images";
-        const char *OUTPUT_BLOB_NAME = "output";
+        const char *OUTPUT_BLOB_NAME = "output0";
         int batch_size = 0;
         int num_classes = -1;
+        int input_size = 0;
 
     private:
         Logger gLogger;
@@ -52,14 +42,29 @@ namespace TRTInferV1
         uint8_t *img_host = nullptr;
         uint8_t *img_device = nullptr;
         float *output;
+        int num_stride = 0;
+        const int num_stride_1280 = 4;
+        const int num_stride_640 = 3;
+
+        const float anchors_640[3][6] = {{10.0, 13.0, 16.0, 30.0, 33.0, 23.0},
+                                         {30.0, 61.0, 62.0, 45.0, 59.0, 119.0},
+                                         {116.0, 90.0, 156.0, 198.0, 373.0, 326.0}};
+
+        const float anchors_1280[4][6] = {{19, 27, 44, 40, 38, 94},
+                                          {96, 68, 86, 152, 180, 137},
+                                          {140, 301, 303, 264, 238, 542},
+                                          {436, 615, 739, 380, 925, 792}};
+
+        float *anchors;
 
     private:
         int inter_frame_compensation = 0;
 
     private:
-        float iou(float lbox[4], float rbox[4]);
-        void nms(std::vector<Yolo::Detection> &res, float *output, float conf_thresh, float nms_thresh);
-        void postprocess(std::vector<std::vector<Yolo::Detection>> &batch_res, std::vector<cv::Mat> &frames, float &confidence_threshold, float &nms_threshold);
+        double sigmoid(double x);
+        void nms(std::vector<DetectionObj> &input_boxes, float &nms_threshold);
+        void decode_output(std::vector<DetectionObj> &res, cv::Mat &frame, float *pdata, float &obj_threshold, float &confidence_threshold, float &nms_threshold);
+        void postprocess(std::vector<std::vector<DetectionObj>> &batch_res, std::vector<cv::Mat> &frames, float &obj_threshold, float &confidence_threshold, float &nms_threshold);
 
     public:
         /**
@@ -101,7 +106,7 @@ namespace TRTInferV1
          * @param nms_threshold
          * 非极大值抑制阈值
          */
-        std::vector<std::vector<Yolo::Detection>> doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold);
+        std::vector<std::vector<DetectionObj>> doInference(std::vector<cv::Mat> &frames, float obj_threshold, float confidence_threshold, float nms_threshold);
         /**
          * @brief 计算帧内时间补偿
          * @param limited_fps
@@ -119,7 +124,7 @@ namespace TRTInferV1
          * @param limited_fps
          * 目标FPS设定值，推理过程的帧数将尝试限定在目标值附近，若运行帧率大于设定值，实际帧数将会接近并稳定下来，指定帧数越高，实际帧数偏差越大，帧数稳定性为+1~-2FPS
          */
-        std::vector<std::vector<Yolo::Detection>> doInferenceLimitFPS(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold, const int limited_fps);
+        std::vector<std::vector<DetectionObj>> doInferenceLimitFPS(std::vector<cv::Mat> &frames, float obj_threshold, float confidence_threshold, float nms_threshold, const int limited_fps);
         /**
          * @brief 构建engine
          * @param onnx_path

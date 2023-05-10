@@ -7,7 +7,7 @@ int main()
     // cv::namedWindow("Test3", cv::WINDOW_NORMAL);
     // cv::namedWindow("Test4", cv::WINDOW_NORMAL);
     TRTInferV1::TRTInfer myInfer(0);
-    // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/build/yolox.onnx", 8, 416, 416);
+    // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/build/best.onnx", 8, 416, 416);
     // myInfer.saveEngineFile(data, "/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine");
     myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine", 4, 1);
 
@@ -43,21 +43,21 @@ int main()
         // frames.emplace_back(img3);
         // frames.emplace_back(img4);
         auto start_t = std::chrono::system_clock::now().time_since_epoch();
-        std::vector<std::vector<TRTInferV1::Yolo::Detection>> result = myInfer.doInferenceLimitFPS(frames, 0.9, 0.5, 120);
+        std::vector<std::vector<TRTInferV1::DetectionObj>> result = myInfer.doInferenceLimitFPS(frames, 0.4, 0.9, 0.5, 120);
         auto end_t = std::chrono::system_clock::now().time_since_epoch();
         char ch[255];
         for (int i(0); i < int(frames.size()); ++i)
         {
             for (int j(0); j < int(result[i].size()); ++j)
             {
-                std::cout << result[i][j].class_id << "|" << result[i][j].conf << std::endl;
+                std::cout << result[i][j].classId << "|" << result[i][j].confidence << std::endl;
             }
 
             sprintf(ch, "FPS %d", int(std::chrono::nanoseconds(1000000000).count() / (end_t - start_t).count()));
             std::string fps_str = ch;
             cv::putText(frames[i], fps_str, {10, 25}, cv::FONT_HERSHEY_SIMPLEX, 1, {0, 255, 0});
         }
-        std::cout << ch << std::endl;
+        // std::cout << ch << std::endl;
         cv::imshow("Test", frames[0]);
         // cv::imshow("Test2", frames[1]);
         // cv::imshow("Test3", frames[2]);
