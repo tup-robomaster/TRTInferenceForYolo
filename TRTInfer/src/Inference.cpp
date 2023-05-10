@@ -1,10 +1,6 @@
 #include "../include/Inference.h"
 namespace TRTInferV1
 {
-    double TRTInfer::sigmoid(double x)
-    {
-        return (1 / (1 + exp(-x)));
-    }
 
     void TRTInfer::nms(std::vector<DetectionObj> &input_boxes, float &nms_threshold)
     {
@@ -77,7 +73,7 @@ namespace TRTInferV1
                 {
                     for (j = 0; j < num_grid_x; ++j)
                     {
-                        float box_score = this->sigmoid(pdata[4]);
+                        float box_score = pdata[4];
                         if (box_score > obj_threshold)
                         {
                             int max_ind = 0;

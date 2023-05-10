@@ -61,7 +61,6 @@ namespace TRTInferV1
         int inter_frame_compensation = 0;
 
     private:
-        double sigmoid(double x);
         void nms(std::vector<DetectionObj> &input_boxes, float &nms_threshold);
         void decode_output(std::vector<DetectionObj> &res, cv::Mat &frame, float *pdata, float &obj_threshold, float &confidence_threshold, float &nms_threshold);
         void postprocess(std::vector<std::vector<DetectionObj>> &batch_res, std::vector<cv::Mat> &frames, float &obj_threshold, float &confidence_threshold, float &nms_threshold);
