@@ -333,4 +333,14 @@ namespace TRTInferV1
 
         return serializedModel;
     }
+
+    int TRTInfer::getInputW()
+    {
+        return this->input_dims.d[3];
+    }
+
+    int TRTInfer::getInputH()
+    {
+        return this->input_dims.d[2];
+    }
 }
