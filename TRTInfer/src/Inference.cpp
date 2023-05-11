@@ -67,8 +67,6 @@ namespace TRTInferV1
             int num_grid_y = (int)ceil(this->input_dims.d[2] / stride);
             for (q = 0; q < 3; ++q)
             {
-                const float anchor_w = this->anchors[n * 6 + q * 2];
-                const float anchor_h = this->anchors[n * 6 + q * 2 + 1];
                 for (i = 0; i < num_grid_y; ++i)
                 {
                     for (j = 0; j < num_grid_x; ++j)
@@ -89,10 +87,10 @@ namespace TRTInferV1
                             max_class_score *= box_score;
                             if (max_class_score > confidence_threshold)
                             {
-                                float cx = (pdata[0] * 2.f - 0.5f + j) * stride; /// cx
-                                float cy = (pdata[1] * 2.f - 0.5f + i) * stride; /// cy
-                                float w = powf(pdata[2] * 2.f, 2.f) * anchor_w;  /// w
-                                float h = powf(pdata[3] * 2.f, 2.f) * anchor_h;  /// h
+                                float cx = pdata[0]; /// cx
+                                float cy = pdata[1]; /// cy
+                                float w = pdata[2];  /// w
+                                float h = pdata[3];  /// h
 
                                 float xmin = (cx - padw - 0.5 * w) * ratiow;
                                 float ymin = (cy - padh - 0.5 * h) * ratioh;
