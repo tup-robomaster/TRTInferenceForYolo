@@ -312,7 +312,7 @@ namespace TRTInferV1
         IOptimizationProfile *profile = builder->createOptimizationProfile();
 
         profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kMIN, Dims4(1, 3, input_h, input_w));
-        profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kOPT, Dims4(ceil(maxBatchSize / 2), 3, input_h, input_w));
+        profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kOPT, Dims4(int(ceil(maxBatchSize / 2.)), 3, input_h, input_w));
         profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kMAX, Dims4(maxBatchSize, 3, input_h, input_w));
 
         // Build engine
