@@ -55,7 +55,7 @@ namespace TRTInferV1
         uint8_t *img_host = nullptr;
         uint8_t *img_device = nullptr;
         float *output;
-    
+
     private:
         int inter_frame_compensation = 0;
 
@@ -151,6 +151,14 @@ namespace TRTInferV1
          * Tensor输入图像尺寸 w
          */
         IHostMemory *createEngine(const std::string onnx_path, unsigned int maxBatchSize, int input_h, int input_w);
+        /**
+         * @brief 获取输入尺寸
+         */
+        int getInputSizeH();
+        /**
+         * @brief 获取输入尺寸
+         */
+        int getInputSizeW();
     };
 }
 
