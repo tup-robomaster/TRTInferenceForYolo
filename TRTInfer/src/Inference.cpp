@@ -453,7 +453,7 @@ namespace TRTInferV1
         // 这里有个OptProfileSelector，这个用来设置优化的参数,比如（Tensor的形状或者动态尺寸），
 
         profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kMIN, Dims4(1, 3, input_h, input_w));
-        profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kOPT, Dims4(int(maxBatchSize / 2), 3, input_h, input_w));
+        profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kOPT, Dims4(ceil(maxBatchSize / 2), 3, input_h, input_w));
         profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kMAX, Dims4(maxBatchSize, 3, input_h, input_w));
 
         // Build engine
