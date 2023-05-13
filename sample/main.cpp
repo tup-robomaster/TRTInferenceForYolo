@@ -7,9 +7,9 @@ int main()
     // cv::namedWindow("Test3", cv::WINDOW_NORMAL);
     // cv::namedWindow("Test4", cv::WINDOW_NORMAL);
     TRTInferV1::TRTInfer myInfer(0);
-    // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/build/best.onnx", 8, 1280, 1280);
-    // myInfer.saveEngineFile(data, "/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine");
-    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine", 4, 1);
+    // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYolo/sample/build/43best.onnx", 8, 640, 640);
+    // myInfer.saveEngineFile(data, "/home/ninefish/nine-fish/TRTInferenceForYolo/sample/engines/model_trt.engine");
+    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYolo/sample/engines/model_trt.engine", 4, 36);
 
     cv::VideoCapture cap(0);
     std::vector<cv::Mat> frames;
@@ -43,13 +43,16 @@ int main()
         // frames.emplace_back(img3);
         // frames.emplace_back(img4);
         auto start_t = std::chrono::system_clock::now().time_since_epoch();
-        std::vector<std::vector<TRTInferV1::DetectionObj>> result = myInfer.doInferenceLimitFPS(frames, 0.3, 0.3, 0.3, 120);
+        std::vector<std::vector<TRTInferV1::DetectionObj>> result = myInfer.doInferenceLimitFPS(frames, 0.6, 0.6, 0.3, 120);
         auto end_t = std::chrono::system_clock::now().time_since_epoch();
         char ch[255];
         for (int i(0); i < int(frames.size()); ++i)
         {
             for (int j(0); j < int(result[i].size()); ++j)
             {
+                cv::Rect r = cv::Rect(result[i][j].x1, result[i][j].y1, result[i][j].x2 - result[i][j].x1, result[i][j].y2 - result[i][j].y1);
+                cv::rectangle(frames[i], r, cv::Scalar(255, 255, 255), 1);
+                std::cout << result[i][j].x1 << " " << result[i][j].y1 << " " << result[i][j].x2 << " " << result[i][j].y2 << std::endl;
                 std::cout << result[i][j].classId << "|" << result[i][j].confidence << std::endl;
             }
 
