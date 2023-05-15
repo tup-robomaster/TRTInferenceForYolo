@@ -37,10 +37,6 @@ using namespace nvonnxparser;
 #define MAX_IMAGE_INPUT_SIZE_THRESH 10000 * 10000
 #define MAX_OUTPUT_BBOX_COUNT 1000
 
-#define PROCESSOR_1_MASK                    0x01 << 1
-#define PROCESSOR_2_MASK                    0x01 << 2
-#define PROCESSOR_3_MASK                    0x01 << 3
-
 using namespace nvinfer1;
 
 #endif  // __PUBLIC_H

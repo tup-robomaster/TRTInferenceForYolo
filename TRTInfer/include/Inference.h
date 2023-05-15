@@ -43,8 +43,9 @@ namespace TRTInferV1
         uint8_t *img_device = nullptr;
         float *output;
         int num_stride = 0;
-        const int num_stride_1280 = 4;
         const int num_stride_640 = 3;
+        const int num_stride_1280 = 4;
+        
 
         const float anchors_640[3][6] = {{10.0, 13.0, 16.0, 30.0, 33.0, 23.0},
                                          {30.0, 61.0, 62.0, 45.0, 59.0, 119.0},

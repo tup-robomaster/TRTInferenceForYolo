@@ -97,7 +97,8 @@ namespace TRTInferV1
                                 float xmax = (cx - padw + 0.5 * w) * ratiow;
                                 float ymax = (cy - padh + 0.5 * h) * ratioh;
 
-                                res.emplace_back(DetectionObj{max_ind, max_class_score, xmin, ymin, xmax, ymax});
+                                if (xmin >= 0. && ymin >= 0. && xmax <= float(frame.cols) && ymax <= float(frame.rows))
+                                    res.emplace_back(DetectionObj{max_ind, max_class_score, xmin, ymin, xmax, ymax});
                             }
                         }
                         ++row_ind;
