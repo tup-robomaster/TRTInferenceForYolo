@@ -2,9 +2,15 @@
 
 为沈阳航空航天大学TUP机器人实验室设计的Yolox Tensorrt高性能推理加速模块
 
+适配模型仓库 [TUP-NN-Train-2](https://github.com/tup-robomaster/TUP-NN-Train-2 "仓库地址")
+
+Yolov5 v6.0版：[TRTInferenceForYolov5](https://github.com/tup-robomaster/TRTInferenceForYolo/tree/yolov5 "仓库地址")
+
 # Author: INIF-FISH iratecat1@outlook.com
 
 # 环境
+
+[Recommend]
 
 Eigen3 3.3.7
 
@@ -38,3 +44,5 @@ while(...)
 ...
 myInfer.unInitModule(); //[Optional]
 ```
+
+注意：应根据sample中CMakeLists.txt作适当修改以适配不同环境/设备，特别注意显卡架构代码
