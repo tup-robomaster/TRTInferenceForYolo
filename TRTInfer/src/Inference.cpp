@@ -373,6 +373,7 @@ namespace TRTInferV1
         if (!this->_is_inited)
         {
             this->gLogger.log(ILogger::Severity::kERROR, "Module not inited !");
+            return {};
         }
         if (frames.size() == 0 || int(frames.size()) > this->input_dims.d[0])
         {
