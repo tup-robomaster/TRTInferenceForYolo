@@ -6,6 +6,8 @@
 
 # 环境
 
+[Recommend]
+
 Eigen3 3.3.7
 
 Cuda 11.8
@@ -19,7 +21,7 @@ Tensorrt 8.5.3
 # 使用
 
 ```cpp
-#include "TRTInferenceForYoloX/TRTInfer/include/Inference.h"
+#include "TRTInferenceForYolov5/TRTInfer/include/Inference.h"
 ...
 TRTInferV1::TRTInfer myInfer(const int device);
 nvinfer1::IHostMemory *data = myInfer.createEngine(const std::string onnx_path, unsigned int maxBatchSize, int input_h, int input_w); //[Optional]
@@ -38,3 +40,5 @@ while(...)
 ...
 myInfer.unInitModule(); //[Optional]
 ```
+
+注意：应根据sample中CMakeLists.txt作适当修改以适配不同环境/设备，特别注意显卡架构代码

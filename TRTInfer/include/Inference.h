@@ -102,6 +102,8 @@ namespace TRTInferV1
          * @brief 执行推理
          * @param frames
          * 需要推理的图像序列，图像数量决定推理时batch_size，不可大于初始化模型时指定的batch_size
+         * @param obj_threshold
+         * box置信度阈值
          * @param confidence_threshold
          * 置信度阈值
          * @param nms_threshold
@@ -118,6 +120,8 @@ namespace TRTInferV1
          * @brief 执行推理(帧限制)
          * @param frames
          * 需要推理的图像序列，图像数量决定推理时batch_size，不可大于初始化模型时指定的batch_size
+         * @param obj_threshold
+         * box置信度阈值
          * @param confidence_threshold
          * 置信度阈值
          * @param nms_threshold
