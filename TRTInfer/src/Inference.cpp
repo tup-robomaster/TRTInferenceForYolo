@@ -207,9 +207,9 @@ namespace TRTInferV1
 
     void TRTInfer::unInitMoudle()
     {
-        delete this->engine;
         delete this->context;
         delete this->runtime;
+        delete this->engine;
         CHECK(cudaFree(img_device));
         CHECK(cudaFreeHost(img_host));
         CHECK(cudaFree(this->buffers[this->inputIndex]));
