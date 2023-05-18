@@ -8,9 +8,9 @@ int main()
     // cv::namedWindow("Test3", cv::WINDOW_NORMAL);
     // cv::namedWindow("Test4", cv::WINDOW_NORMAL);
     TRTInferV1::TRTInfer myInfer(0);
-    // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/build/yolox.onnx", 8, 416, 416);
-    // myInfer.saveEngineFile(data, "/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine");
-    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/engines/model_trt.engine", 4, num_apex, 8, 8, 128);
+    // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYolo/sample/build/yolox.onnx", 8, 416, 416);
+    // myInfer.saveEngineFile(data, "/home/ninefish/nine-fish/TRTInferenceForYolo/sample/engines/model_trt.engine");
+    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYolo/sample/engines/model_trt.engine", 4, num_apex, 8, 8, 128);
 
     cv::VideoCapture cap(0);
     std::vector<cv::Mat> frames;
@@ -18,7 +18,7 @@ int main()
     // cv::Mat src = cv::imread("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/46.jpg");
     // cv::Mat src2 = cv::imread("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/SAU0076.jpg");
     // cv::Mat src3 = cv::imread("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/1674.jpg");
-    // cv::Mat src4 = cv::imread("/home/ninefish/nine-fish/TRTInferenceForYoloX/sample/SAU0830.jpg");
+    cv::Mat src4 = cv::imread("/home/ninefish/nine-fish/TRTInferenceForYolo/sample/SAU0830.jpg");
 
     myInfer.calculate_inter_frame_compensation(120);
 
@@ -29,17 +29,17 @@ int main()
         // cv::Mat img2 = src2.clone();
         // cv::Mat img3 = src3.clone();
         // cv::Mat img4 = src4.clone();
-        if (!cap.isOpened())
-        {
-            continue;
-        }
-        cv::Mat img, img2, img3, img4;
-        cap.read(img);
+        // if (!cap.isOpened())
+        // {
+        //     continue;
+        // }
+        // cv::Mat img, img2, img3, img4;
+        // cap.read(img);
         // img2 = img.clone();
         // img3 = img.clone();
         // img4 = img.clone();
-        assert(!img.empty());
-        frames.emplace_back(img);
+        // assert(!img.empty());
+        frames.emplace_back(src4);
         // frames.emplace_back(img2);
         // frames.emplace_back(img3);
         // frames.emplace_back(img4);
