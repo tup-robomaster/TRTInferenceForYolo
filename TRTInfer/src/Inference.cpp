@@ -276,7 +276,7 @@ namespace TRTInferV1
     {
     }
 
-    bool TRTInfer::initMoudle(const std::string engine_file_path, const int batch_size, const int num_apex, const int num_classes, const int num_colors, const int topK)
+    bool TRTInfer::initModule(const std::string engine_file_path, const int batch_size, const int num_apex, const int num_classes, const int num_colors, const int topK)
     {
         assert(num_apex <= 32 && num_apex >= 2);
         assert(batch_size > 0 && num_classes > 0 && num_colors > 0 && topK > 0);
@@ -341,11 +341,13 @@ namespace TRTInferV1
         CHECK(cudaMallocHost((void **)&this->img_host, MAX_IMAGE_INPUT_SIZE_THRESH * 3 * sizeof(float)));
         CHECK(cudaMalloc((void **)&this->img_device, MAX_IMAGE_INPUT_SIZE_THRESH * 3 * sizeof(float)));
         this->output = (float *)malloc(batch_size * this->output_size * sizeof(float));
+        this->_is_inited = true;
         return true;
     }
 
-    void TRTInfer::unInitMoudle()
+    void TRTInfer::unInitModule()
     {
+        this->_is_inited = false;
         delete this->context;
         delete this->runtime;
         delete this->engine;
@@ -368,6 +370,10 @@ namespace TRTInferV1
 
     std::vector<std::vector<DetectObject>> TRTInfer::doInference(std::vector<cv::Mat> &frames, float confidence_threshold, float nms_threshold)
     {
+        if (!this->_is_inited)
+        {
+            this->gLogger.log(ILogger::Severity::kERROR, "Module not inited !");
+        }
         if (frames.size() == 0 || int(frames.size()) > this->input_dims.d[0])
         {
             this->gLogger.log(ILogger::Severity::kWARNING, "Invalid frames size");

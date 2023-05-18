@@ -58,6 +58,7 @@ namespace TRTInferV1
 
     private:
         int inter_frame_compensation = 0;
+        bool _is_inited = false;
 
     private:
         inline int argmax(const float *ptr, int len);
@@ -98,11 +99,11 @@ namespace TRTInferV1
          * @param topK
          * topK设定值
          */
-        bool initMoudle(const std::string engine_file_path, const int batch_size, const int num_apex, const int num_classes, const int num_colors, const int topK);
+        bool initModule(const std::string engine_file_path, const int batch_size, const int num_apex, const int num_classes, const int num_colors, const int topK);
         /**
          * @brief 反初始化TRT模型，释放显存
          */
-        void unInitMoudle();
+        void unInitModule();
         /**
          * @brief 保存engine文件至指定路径
          * @param data
