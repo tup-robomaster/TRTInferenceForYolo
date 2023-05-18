@@ -9,7 +9,7 @@ int main()
     TRTInferV1::TRTInfer myInfer(0);
     // nvinfer1::IHostMemory *data = myInfer.createEngine("/home/ninefish/nine-fish/TRTInferenceForYolo/sample/build/best.onnx", 4, 1280, 1280);
     // myInfer.saveEngineFile(data, "/home/ninefish/nine-fish/TRTInferenceForYolo/sample/engines/model_trt.engine");
-    myInfer.initMoudle("/home/ninefish/nine-fish/TRTInferenceForYolo/sample/engines/model_trt.engine", 1, 1);
+    myInfer.initModule("/home/ninefish/nine-fish/TRTInferenceForYolo/sample/engines/model_trt.engine", 1, 1);
 
     // cv::VideoCapture cap(0);
     std::vector<cv::Mat> frames;

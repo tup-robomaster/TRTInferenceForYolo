@@ -60,6 +60,7 @@ namespace TRTInferV1
 
     private:
         int inter_frame_compensation = 0;
+        bool _is_inited = false;
 
     private:
         void nms(std::vector<DetectionObj> &input_boxes, float &nms_threshold);
@@ -84,11 +85,11 @@ namespace TRTInferV1
          * @param num_classes
          * num_classes设定值，类别数量
          */
-        bool initMoudle(const std::string engine_file_path, const int batch_size, const int num_classes);
+        bool initModule(const std::string engine_file_path, const int batch_size, const int num_classes);
         /**
          * @brief 反初始化TRT模型，释放显存
          */
-        void unInitMoudle();
+        void unInitModule();
         /**
          * @brief 保存engine文件至指定路径
          * @param data

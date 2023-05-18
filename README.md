@@ -24,7 +24,7 @@ Tensorrt 8.5.3
 TRTInferV1::TRTInfer myInfer(const int device);
 nvinfer1::IHostMemory *data = myInfer.createEngine(const std::string onnx_path, unsigned int maxBatchSize, int input_h, int input_w); //[Optional]
 myInfer.saveEngineFile(IHostMemory* data, const std::string engine_file_path); //[Optional]
-myInfer.initMoudle(const std::string engine_file_path, const int batch_size, const int num_apex, const int num_classes, const int num_colors, const int topK);
+myInfer.initModule(const std::string engine_file_path, const int batch_size, const int num_apex, const int num_classes, const int num_colors, const int topK);
 std::vector<cv::Mat> frames;
 myInfer.calculate_inter_frame_compensation(const int limited_fps); //[Optional]
 ...
@@ -36,5 +36,5 @@ while(...)
     ...
 }
 ...
-myInfer.unInitMoudle(); //[Optional]
+myInfer.unInitModule(); //[Optional]
 ```
