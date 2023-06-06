@@ -42,7 +42,7 @@ namespace TRTInferV1
         int topK = -1;
 
     private:
-        Logger gLogger;
+        TRTLogger gLogger;
         IRuntime *runtime;
         ICudaEngine *engine;
         IExecutionContext *context;
