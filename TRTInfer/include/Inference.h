@@ -29,7 +29,7 @@ namespace TRTInferV1
         int input_size = 0;
 
     private:
-        Logger gLogger;
+        TRTLogger gLogger;
         IRuntime *runtime;
         ICudaEngine *engine;
         IExecutionContext *context;
