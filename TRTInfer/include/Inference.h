@@ -17,13 +17,13 @@ namespace TRTInferV1
 
     /**
      * @brief TRT推理
-     * 高性能TRT YOLOX推理模块
+     * 高性能TRT YOLOv5推理模块
      */
     class TRTInfer
     {
     private:
-        const char *INPUT_BLOB_NAME = "images";
-        const char *OUTPUT_BLOB_NAME = "output0";
+        const char *INPUT_BLOB_NAME = "images";   //输入Tensor名称
+        const char *OUTPUT_BLOB_NAME = "output0"; //输出Tensor名称
         int batch_size = 0;
         int num_classes = -1;
         int input_size = 0;
