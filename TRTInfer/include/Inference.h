@@ -22,8 +22,8 @@ namespace TRTInferV1
     class TRTInfer
     {
     private:
-        const char *INPUT_BLOB_NAME = "images";   //输入Tensor名称
-        const char *OUTPUT_BLOB_NAME = "output0"; //输出Tensor名称
+        const char *INPUT_BLOB_NAME = "images";   // 输入Tensor名称
+        const char *OUTPUT_BLOB_NAME = "output0"; // 输出Tensor名称
         int batch_size = 0;
         int num_classes = -1;
         int input_size = 0;
@@ -45,7 +45,6 @@ namespace TRTInferV1
         int num_stride = 0;
         const int num_stride_640 = 3;
         const int num_stride_1280 = 4;
-        
 
         const float anchors_640[3][6] = {{10.0, 13.0, 16.0, 30.0, 33.0, 23.0},
                                          {30.0, 61.0, 62.0, 45.0, 59.0, 119.0},
@@ -140,8 +139,10 @@ namespace TRTInferV1
          * Tensor输入图像尺寸 h
          * @param input_w
          * Tensor输入图像尺寸 w
+         * @param BuilderFlag
+         * 计算精度 0:FP16 1:INT8 else:None
          */
-        IHostMemory *createEngine(const std::string onnx_path, unsigned int maxBatchSize, int input_h, int input_w);
+        IHostMemory *createEngine(const std::string onnx_path, unsigned int maxBatchSize, int input_h, int input_w, int BuilderFlag);
 
         /**
          *@brief 获取输入大小W

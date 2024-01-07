@@ -210,8 +210,8 @@ namespace TRTInferV1
     {
         this->_is_inited = false;
         delete this->context;
-        delete this->runtime;
         delete this->engine;
+        delete this->runtime;
         CHECK(cudaFree(img_device));
         CHECK(cudaFreeHost(img_host));
         CHECK(cudaFree(this->buffers[this->inputIndex]));
@@ -299,7 +299,7 @@ namespace TRTInferV1
         return result;
     }
 
-    IHostMemory *TRTInfer::createEngine(const std::string onnx_path, unsigned int maxBatchSize, int input_h, int input_w)
+    IHostMemory *TRTInfer::createEngine(const std::string onnx_path, unsigned int maxBatchSize, int input_h, int input_w, int BuilderFlag)
     {
         IBuilder *builder = createInferBuilder(this->gLogger);
         uint32_t flag = 1U << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
@@ -310,7 +310,6 @@ namespace TRTInferV1
         {
             this->gLogger.log(ILogger::Severity::kINTERNAL_ERROR, "failed parse the onnx mode");
         }
-        // 解析有错误将返回
         for (int32_t i = 0; i < parser->getNbErrors(); ++i)
         {
             std::cout << parser->getError(i)->desc() << std::endl;
@@ -323,15 +322,15 @@ namespace TRTInferV1
         profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kOPT, Dims4(int(ceil(maxBatchSize / 2.)), 3, input_h, input_w));
         profile->setDimensions(INPUT_BLOB_NAME, OptProfileSelector::kMAX, Dims4(maxBatchSize, 3, input_h, input_w));
 
-        // Build engine
         config->addOptimizationProfile(profile);
         config->setMemoryPoolLimit(MemoryPoolType::kWORKSPACE, 10 << 20);
-        config->setFlag(nvinfer1::BuilderFlag::kFP16); // 设置计算
-        // config->setFlag(nvinfer1::BuilderFlag::kINT8);
+        if(BuilderFlag == nvinfer1::BuilderFlag::kFP16)
+            config->setFlag(nvinfer1::BuilderFlag::kFP16);
+        if(BuilderFlag == nvinfer1::BuilderFlag::kINT8)
+            config->setFlag(nvinfer1::BuilderFlag::kINT8);
         IHostMemory *serializedModel = builder->buildSerializedNetwork(*network, *config);
         this->gLogger.log(ILogger::Severity::kINFO, "successfully convert onnx to engine");
 
-        // 销毁
         delete network;
         delete parser;
         delete config;
