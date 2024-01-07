@@ -231,9 +231,9 @@ namespace TRTInferV1
 
     std::vector<std::vector<DetectionObj>> TRTInfer::doInference(std::vector<cv::Mat> &frames, float obj_threshold, float confidence_threshold, float nms_threshold)
     {
-        if(!this->_is_inited)
+        if (!this->_is_inited)
         {
-            this->gLogger.log(ILogger::Severity::kERROR,"Module not inited !");
+            this->gLogger.log(ILogger::Severity::kERROR, "Module not inited !");
             return {};
         }
         if (frames.size() == 0 || int(frames.size()) > this->input_dims.d[0])
@@ -324,9 +324,9 @@ namespace TRTInferV1
 
         config->addOptimizationProfile(profile);
         config->setMemoryPoolLimit(MemoryPoolType::kWORKSPACE, 10 << 20);
-        if(BuilderFlag == nvinfer1::BuilderFlag::kFP16)
+        if (BuilderFlag == 0)
             config->setFlag(nvinfer1::BuilderFlag::kFP16);
-        if(BuilderFlag == nvinfer1::BuilderFlag::kINT8)
+        if (BuilderFlag == 1)
             config->setFlag(nvinfer1::BuilderFlag::kINT8);
         IHostMemory *serializedModel = builder->buildSerializedNetwork(*network, *config);
         this->gLogger.log(ILogger::Severity::kINFO, "successfully convert onnx to engine");
