@@ -41,7 +41,6 @@ namespace TRTInferV1
                 }
             }
         }
-        // return post_nms;
         int idx_t = 0;
         input_boxes.erase(std::remove_if(input_boxes.begin(), input_boxes.end(), [&idx_t, &isSuppressed](const DetectionObj &f)
                                          { return isSuppressed[idx_t++]; }),
@@ -59,7 +58,7 @@ namespace TRTInferV1
         padh = this->input_dims.d[2] - unpad_h;
         padw /= 2;
         padh /= 2;
-        int n = 0, q = 0, i = 0, j = 0, row_ind = 0, k = 0; /// xmin,ymin,xamx,ymax,box_score, class_score
+        int n = 0, q = 0, i = 0, j = 0, row_ind = 0, k = 0;
         for (n = 0; n < this->num_stride; ++n)
         {
             const float stride = pow(2, n + 3);
